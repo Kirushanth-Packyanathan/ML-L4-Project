@@ -29,11 +29,6 @@ Open a **new terminal** and run:
 .\backend\venv\Scripts\streamlit run streamlit_app.py --server.port 8501
 ```
 
-```bash
-docker build -t house-price-app .
-docker run -p 8000:8000 -p 8501:8501 house-price-app
-```
-
 The app will be available at: `http://localhost:8501`
 
 ---
