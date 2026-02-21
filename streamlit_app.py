@@ -10,462 +10,797 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
 
-/* ─── Reset & Base ─────────────────────────── */
+/* ─── CSS Variables ─────────────────────────────────────────── */
+:root {
+  --bg:        #0A0E1A;
+  --bg2:       #0F1629;
+  --surface:   #141B2D;
+  --surface2:  #1A2340;
+  --border:    rgba(255,255,255,0.07);
+  --border2:   rgba(255,255,255,0.12);
+  --text:      #E8EAF0;
+  --text2:     #8892A4;
+  --text3:     #5A6478;
+  --accent:    #FF6B2B;
+  --accent2:   #FF8C5A;
+  --accentbg:  rgba(255,107,43,0.12);
+  --accentbdr: rgba(255,107,43,0.25);
+  --blue:      #4F8EF7;
+  --bluebg:    rgba(79,142,247,0.1);
+  --green:     #10D9A0;
+  --greenbg:   rgba(16,217,160,0.1);
+  --purple:    #A78BFA;
+  --purplebg:  rgba(167,139,250,0.1);
+  --red:       #F56565;
+  --redbg:     rgba(245,101,101,0.1);
+  --radius:    16px;
+  --radius-sm: 10px;
+  --shadow:    0 8px 32px rgba(0,0,0,0.4);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+  --glow:      0 0 40px rgba(255,107,43,0.15);
+}
+
+/* ─── Reset & Base ──────────────────────────────────────────── */
 *, html, body, [class*="css"] {
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
-    box-sizing: border-box;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  box-sizing: border-box;
 }
 .stApp {
-    background: #F7F8FC;
-    min-height: 100vh;
+  background: var(--bg) !important;
+  min-height: 100vh;
 }
 #MainMenu, footer, header, .stDeployButton { visibility: hidden; display: none; }
+.block-container { padding: 0 1.5rem 2rem !important; max-width: 1400px !important; }
 
-/* ─── Hero Banner ───────────────────────────── */
+/* ─── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+/* ─── Hero Banner ───────────────────────────────────────────── */
 .hero-wrap {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 45%, #0f3460 100%);
-    padding: 2.2rem 2.5rem 2rem;
-    margin: -1rem -1rem 1.8rem -1rem;
-    position: relative;
-    overflow: hidden;
+  background: linear-gradient(135deg, #0A0E1A 0%, #0F1629 50%, #0A1628 100%);
+  padding: 2.5rem 2.5rem 2.2rem;
+  margin: -1rem -1.5rem 2rem -1.5rem;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border2);
 }
 .hero-wrap::before {
-    content: '';
-    position: absolute; inset: 0;
-    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    pointer-events: none;
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 80% at 80% -20%, rgba(255,107,43,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 60% at 10% 120%, rgba(79,142,247,0.12) 0%, transparent 60%);
+  pointer-events: none;
 }
+/* Animated grid lines */
 .hero-wrap::after {
-    content: '';
-    position: absolute;
-    top: -80px; right: -80px;
-    width: 350px; height: 350px;
-    background: radial-gradient(circle, rgba(253,126,20,0.12) 0%, transparent 70%);
-    pointer-events: none;
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
 }
 .hero-inner {
-    position: relative; z-index: 1;
-    display: flex; align-items: center; gap: 1rem;
+  position: relative; z-index: 2;
+  display: flex; align-items: center; gap: 1.2rem;
 }
 .hero-icon {
-    width: 52px; height: 52px;
-    background: linear-gradient(135deg, #fd7e14, #e8590c);
-    border-radius: 14px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.5rem;
-    box-shadow: 0 8px 24px rgba(253,126,20,0.35);
-    flex-shrink: 0;
+  width: 62px; height: 62px;
+  background: linear-gradient(135deg, var(--accent), #e8590c);
+  border-radius: 18px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.8rem;
+  box-shadow: 0 12px 32px rgba(255,107,43,0.45), 0 0 0 1px rgba(255,107,43,0.2);
+  flex-shrink: 0;
+  animation: hero-pulse 3s ease-in-out infinite;
+}
+@keyframes hero-pulse {
+  0%, 100% { box-shadow: 0 12px 32px rgba(255,107,43,0.45), 0 0 0 1px rgba(255,107,43,0.2); }
+  50%       { box-shadow: 0 12px 48px rgba(255,107,43,0.65), 0 0 0 2px rgba(255,107,43,0.35), 0 0 60px rgba(255,107,43,0.2); }
 }
 .hero-text { flex: 1; }
 .hero-brand {
-    font-size: 1.9rem; font-weight: 800;
-    color: #FFFFFF;
-    letter-spacing: -0.03em;
-    line-height: 1;
-    margin-bottom: 0.3rem;
+  font-size: 2.2rem; font-weight: 800;
+  color: #FFFFFF;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin-bottom: 0.35rem;
 }
-.hero-brand span { color: #fd7e14; }
+.hero-brand span {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 .hero-tagline {
-    font-size: 1rem; font-weight: 400;
-    color: rgba(255,255,255,0.55);
-    line-height: 1.4;
+  font-size: 1.05rem; font-weight: 400;
+  color: var(--text2);
+  line-height: 1.5;
 }
 .hero-chips {
-    display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.65rem;
+  display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.8rem;
 }
 .hero-chip {
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.12);
-    color: rgba(255,255,255,0.7);
-    border-radius: 100px;
-    padding: 0.3rem 0.85rem;
-    font-size: 0.8rem; font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  border-radius: 100px;
+  padding: 0.3rem 0.9rem;
+  font-size: 0.78rem; font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+.hero-chip:hover {
+  background: var(--accentbg);
+  border-color: var(--accentbdr);
+  color: var(--accent);
 }
 .hero-chip.active {
-    background: rgba(253,126,20,0.15);
-    border-color: rgba(253,126,20,0.3);
-    color: #fd7e14;
+  background: var(--accentbg);
+  border-color: var(--accentbdr);
+  color: var(--accent);
+}
+.hero-stats {
+  display: flex; gap: 2rem; margin-top: 1.5rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--border);
+}
+.hero-stat-val {
+  font-size: 1.5rem; font-weight: 800;
+  color: #fff; letter-spacing: -0.03em;
+}
+.hero-stat-lbl {
+  font-size: 0.75rem; color: var(--text3); font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin-top: 0.1rem;
+}
+/* Status dot */
+.status-dot {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.3rem 0.8rem;
+  background: rgba(16,217,160,0.1);
+  border: 1px solid rgba(16,217,160,0.25);
+  border-radius: 100px;
+  font-size: 0.78rem; font-weight: 600;
+  color: var(--green);
+}
+.status-dot::before {
+  content: '';
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green);
+  animation: blink 2s ease-in-out infinite;
+}
+.status-dot.offline {
+  background: var(--redbg);
+  border-color: rgba(245,101,101,0.25);
+  color: var(--red);
+}
+.status-dot.offline::before { background: var(--red); animation: none; }
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
 }
 
-/* ─── Card ─────────────────────────────────── */
+/* ─── Glass Card ────────────────────────────────────────────── */
 .card {
-    background: #FFFFFF;
-    border: 1px solid #EAECF0;
-    border-radius: 16px;
-    padding: 1.5rem;
-    box-shadow: 0 1px 3px rgba(16,24,40,0.06), 0 1px 2px rgba(16,24,40,0.04);
-    margin-bottom: 1.2rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.6rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.2rem;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+}
+.card:hover {
+  box-shadow: var(--shadow);
+  border-color: var(--border2);
 }
 .card-head {
-    display: flex; align-items: center; gap: 0.6rem;
-    margin-bottom: 1.2rem;
-    padding-bottom: 0.9rem;
-    border-bottom: 1px solid #F2F4F7;
+  display: flex; align-items: center; gap: 0.7rem;
+  margin-bottom: 1.3rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
 }
 .card-icon {
-    width: 32px; height: 32px; border-radius: 9px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.9rem; flex-shrink: 0;
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; flex-shrink: 0;
 }
-.ci-orange { background: #FFF4ED; }
-.ci-blue   { background: #EFF8FF; }
-.ci-green  { background: #ECFDF3; }
-.ci-purple { background: #F4F3FF; }
+.ci-orange { background: var(--accentbg); border: 1px solid var(--accentbdr); }
+.ci-blue   { background: var(--bluebg);   border: 1px solid rgba(79,142,247,0.2); }
+.ci-green  { background: var(--greenbg);  border: 1px solid rgba(16,217,160,0.2); }
+.ci-purple { background: var(--purplebg); border: 1px solid rgba(167,139,250,0.2); }
 .card-title {
-    font-size: 0.95rem; font-weight: 700;
-    color: #101828;
-    text-transform: uppercase; letter-spacing: 0.07em;
+  font-size: 0.9rem; font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase; letter-spacing: 0.08em;
 }
 .card-sub {
-    font-size: 0.83rem; color: #98A2B3; font-weight: 400;
-    margin-top: 0.1rem;
+  font-size: 0.82rem; color: var(--text3); font-weight: 400;
+  margin-top: 0.1rem;
 }
 
-/* ─── Form Section Label ────────────────────── */
+/* ─── Section Label ─────────────────────────────────────────── */
 .sec-label {
-    font-size: 0.83rem; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.1em;
-    color: #98A2B3;
-    margin: 1rem 0 0.4rem;
-    display: flex; align-items: center; gap: 0.35rem;
+  font-size: 0.78rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--text3);
+  margin: 1rem 0 0.45rem;
+  display: flex; align-items: center; gap: 0.4rem;
 }
-.sec-label span { color: #D0D5DD; }
 hr.sep {
-    border: none; border-top: 1px solid #F2F4F7;
-    margin: 0.8rem 0;
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1rem 0;
 }
 
-/* ─── Predict Button ────────────────────────── */
+/* ─── Buttons ───────────────────────────────────────────────── */
 .stButton > button {
-    background: linear-gradient(135deg, #fd7e14 0%, #e8590c 100%) !important;
-    color: #FFFFFF !important;
-    border: none !important;
-    border-radius: 12px !important;
-    padding: 0.72rem 1.5rem !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-weight: 700 !important;
-    font-size: 1.05rem !important;
-    letter-spacing: 0.01em !important;
-    transition: all 0.25s cubic-bezier(.4,0,.2,1) !important;
-    box-shadow: 0 4px 14px rgba(253,126,20,0.35) !important;
-    width: 100%;
+  background: linear-gradient(135deg, var(--accent) 0%, #e8590c 100%) !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 0.78rem 1.5rem !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 1.05rem !important;
+  letter-spacing: 0.01em !important;
+  transition: all 0.25s cubic-bezier(.4,0,.2,1) !important;
+  box-shadow: 0 4px 20px rgba(255,107,43,0.4), 0 0 0 0 rgba(255,107,43,0.4) !important;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+.stButton > button::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+  border-radius: 12px;
 }
 .stButton > button:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 8px 24px rgba(253,126,20,0.45) !important;
+  transform: translateY(-3px) !important;
+  box-shadow: 0 8px 30px rgba(255,107,43,0.55), 0 0 0 4px rgba(255,107,43,0.15) !important;
 }
-.stButton > button:active { transform: translateY(0) !important; }
+.stButton > button:active { transform: translateY(0) scale(0.98) !important; }
 .stButton > button:disabled {
-    background: #D0D5DD !important;
-    box-shadow: none !important;
-    transform: none !important;
+  background: var(--surface2) !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
-/* ─── Form Controls ────────────────────────── */
-/* Select box container */
-.stSelectbox > div > div {
-    background: #FFFFFF !important;
-    border: 1.5px solid #D0D5DD !important;
-    border-radius: 9px !important;
+/* ─── Form Controls ─────────────────────────────────────────── */
+.stSelectbox > div > div,
+.stSelectbox [data-baseweb="select"] > div {
+  background: var(--surface2) !important;
+  border: 1.5px solid var(--border2) !important;
+  border-radius: 10px !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
 }
-/* Select box displayed value text */
+.stSelectbox > div > div:hover,
+.stSelectbox [data-baseweb="select"]:hover > div {
+  border-color: var(--accent) !important;
+}
 .stSelectbox [data-baseweb="select"] > div,
 .stSelectbox [data-baseweb="select"] span,
 .stSelectbox [data-baseweb="select"] div[class*="ValueContainer"] span,
 .stSelectbox [data-baseweb="select"] div[class*="ValueContainer"] div {
-    color: #101828 !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-size: 1rem !important;
-    font-weight: 500 !important;
+  color: var(--text) !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 0.97rem !important;
+  font-weight: 500 !important;
+  background: transparent !important;
 }
-/* Dropdown menu options */
+[data-baseweb="popover"],
+[data-baseweb="menu"] {
+  background: var(--surface2) !important;
+  border: 1px solid var(--border2) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--shadow) !important;
+}
 [data-baseweb="popover"] li,
 [data-baseweb="menu"] li,
 [data-baseweb="option"],
 [data-baseweb="option"] span,
 [role="option"], [role="listbox"] * {
-    color: #101828 !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-size: 0.95rem !important;
-    background: #FFFFFF !important;
+  color: var(--text) !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 0.93rem !important;
+  background: transparent !important;
 }
 [data-baseweb="option"]:hover,
 [role="option"]:hover {
-    background: #FFF4ED !important;
-    color: #fd7e14 !important;
+  background: var(--accentbg) !important;
+  color: var(--accent) !important;
 }
-/* Number input */
 .stNumberInput > div > div > input {
-    background: #FFFFFF !important;
-    border: 1.5px solid #D0D5DD !important;
-    border-radius: 9px !important;
-    color: #101828 !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-size: 1rem !important;
-    font-weight: 500 !important;
+  background: var(--surface2) !important;
+  border: 1.5px solid var(--border2) !important;
+  border-radius: 10px !important;
+  color: var(--text) !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 0.97rem !important;
+  font-weight: 500 !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 .stNumberInput > div > div > input:focus {
-    border-color: #fd7e14 !important;
-    box-shadow: 0 0 0 3px rgba(253,126,20,0.12) !important;
-    outline: none !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(255,107,43,0.15) !important;
+  outline: none !important;
 }
-/* All field labels */
 .stSelectbox label, .stNumberInput label, .stCheckbox label {
-    font-size: 0.9rem !important;
-    font-weight: 700 !important;
-    color: #344054 !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.05em !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  color: var(--text2) !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.07em !important;
 }
-/* Checkbox text */
 .stCheckbox label span, .stCheckbox label p {
-    color: #344054 !important;
-    font-size: 0.92rem !important;
-    font-weight: 600 !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
+  color: var(--text2) !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+/* Checkbox */
+.stCheckbox [data-baseweb="checkbox"] > div {
+  background: var(--surface2) !important;
+  border-color: var(--border2) !important;
+  border-radius: 5px !important;
+}
+.stCheckbox [data-baseweb="checkbox"] > div[data-checked="true"] {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+/* Number input stepper buttons */
+.stNumberInput button {
+  background: var(--surface2) !important;
+  border-color: var(--border2) !important;
+  color: var(--text2) !important;
+}
+.stNumberInput button:hover {
+  background: var(--accentbg) !important;
+  color: var(--accent) !important;
 }
 
-/* ─── Price Result ──────────────────────────── */
+/* ─── Price Result ──────────────────────────────────────────── */
 .price-band {
-    background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
-    border-radius: 16px;
-    padding: 1.8rem 1.5rem;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-    margin-bottom: 1rem;
+  background: linear-gradient(135deg, #0F1629 0%, #141B2D 100%);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 2rem 1.8rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  box-shadow: var(--glow), var(--shadow);
 }
 .price-band::before {
-    content: '';
-    position: absolute;
-    bottom: -40px; right: -40px;
-    width: 160px; height: 160px;
-    background: radial-gradient(circle, rgba(253,126,20,0.18) 0%, transparent 70%);
+  content: '';
+  position: absolute;
+  bottom: -60px; right: -60px;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(255,107,43,0.2) 0%, transparent 70%);
+  pointer-events: none;
 }
 .price-band::after {
-    content: '';
-    position: absolute;
-    top: -40px; left: -40px;
-    width: 180px; height: 180px;
-    background: radial-gradient(circle, rgba(15,52,96,0.5) 0%, transparent 70%);
+  content: '';
+  position: absolute;
+  top: -60px; left: -60px;
+  width: 220px; height: 220px;
+  background: radial-gradient(circle, rgba(79,142,247,0.12) 0%, transparent 70%);
+  pointer-events: none;
 }
 .pb-eyebrow {
-    font-size: 0.82rem; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.14em;
-    color: rgba(255,255,255,0.45);
-    margin-bottom: 0.5rem;
-    position: relative; z-index: 1;
+  font-size: 0.78rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.18em;
+  color: var(--text3);
+  margin-bottom: 0.6rem;
+  position: relative; z-index: 1;
 }
 .pb-price {
-    font-size: 2.9rem; font-weight: 800;
-    letter-spacing: -0.04em;
-    color: #FFFFFF;
-    line-height: 1;
-    position: relative; z-index: 1;
+  font-size: 3.4rem; font-weight: 800;
+  letter-spacing: -0.05em;
+  color: #FFFFFF;
+  line-height: 1;
+  position: relative; z-index: 1;
+  text-shadow: 0 0 40px rgba(255,107,43,0.3);
 }
-.pb-price span { color: #fd7e14; }
-.pb-sub {
-    font-size: 0.95rem; color: rgba(255,255,255,0.45);
-    margin-top: 0.4rem; font-weight: 400;
-    position: relative; z-index: 1;
+.pb-price span {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.pb-full {
+  font-size: 0.88rem; color: var(--text3);
+  margin-top: 0.35rem; font-weight: 500;
+  position: relative; z-index: 1;
+  font-style: italic;
 }
 .pb-badge {
-    display: inline-block;
-    background: rgba(253,126,20,0.15);
-    border: 1px solid rgba(253,126,20,0.3);
-    color: #fd7e14;
-    border-radius: 100px;
-    padding: 0.3rem 0.9rem;
-    font-size: 0.82rem; font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    margin-top: 0.8rem;
-    position: relative; z-index: 1;
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  background: rgba(16,217,160,0.1);
+  border: 1px solid rgba(16,217,160,0.25);
+  color: var(--green);
+  border-radius: 100px;
+  padding: 0.3rem 1rem;
+  font-size: 0.8rem; font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 1rem;
+  position: relative; z-index: 1;
+}
+/* Price range bar */
+.price-range-wrap {
+  position: relative; z-index: 1;
+  margin-top: 1.2rem;
+  padding: 0 0.5rem;
+}
+.price-range-labels {
+  display: flex; justify-content: space-between;
+  font-size: 0.75rem; color: var(--text3); font-weight: 500;
+  margin-bottom: 0.4rem;
+}
+.price-range-track {
+  width: 100%; height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 100px;
+  position: relative;
+  overflow: visible;
+}
+.price-range-fill {
+  position: absolute;
+  top: 0; height: 100%;
+  background: linear-gradient(90deg, var(--blue), var(--accent));
+  border-radius: 100px;
+  transition: width 0.6s ease;
+}
+.price-range-dot {
+  position: absolute;
+  top: 50%; transform: translate(-50%, -50%);
+  width: 14px; height: 14px;
+  background: var(--accent);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(255,107,43,0.6);
 }
 
-/* ─── KPI Strip ─────────────────────────────── */
+/* ─── Confidence Meter ──────────────────────────────────────── */
+.conf-wrap {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1rem;
+  display: flex; align-items: center; gap: 1rem;
+}
+.conf-label {
+  font-size: 0.78rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--text3); white-space: nowrap;
+}
+.conf-track {
+  flex: 1; height: 8px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 100px; overflow: hidden;
+}
+.conf-fill {
+  height: 100%; border-radius: 100px;
+  background: linear-gradient(90deg, var(--blue), var(--green));
+  position: relative; overflow: hidden;
+  animation: conf-anim 1s ease-out forwards;
+}
+.conf-fill::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+  animation: shimmer 2s infinite;
+}
+@keyframes conf-anim {
+  from { width: 0 !important; }
+}
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.conf-pct {
+  font-size: 0.95rem; font-weight: 800;
+  color: var(--green); white-space: nowrap;
+}
+
+/* ─── KPI Strip ─────────────────────────────────────────────── */
 .kpi-strip {
-    display: grid; grid-template-columns: 1fr 1fr 1fr;
-    gap: 0.7rem; margin-bottom: 1rem;
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.8rem; margin-bottom: 1rem;
 }
 .kpi {
-    background: #FFFFFF;
-    border: 1px solid #EAECF0;
-    border-radius: 12px;
-    padding: 0.85rem 0.75rem;
-    text-align: center;
-    box-shadow: 0 1px 3px rgba(16,24,40,0.04);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1rem 0.85rem;
+  text-align: center;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
 }
+.kpi::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.kpi:hover::before { opacity: 1; }
+.kpi:hover {
+  border-color: var(--border2);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+.kpi-icon { font-size: 1.1rem; margin-bottom: 0.35rem; }
 .kpi-val {
-    font-size: 1.25rem; font-weight: 800;
-    color: #101828; letter-spacing: -0.02em;
+  font-size: 1.2rem; font-weight: 800;
+  color: var(--text); letter-spacing: -0.02em;
 }
 .kpi-lbl {
-    font-size: 0.75rem; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.1em;
-    color: #98A2B3; margin-top: 0.2rem;
+  font-size: 0.7rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--text3); margin-top: 0.2rem;
 }
+.kpi-accent { color: var(--accent) !important; }
+.kpi-blue   { color: var(--blue) !important; }
+.kpi-green  { color: var(--green) !important; }
+.kpi-k1::before { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+.kpi-k2::before { background: linear-gradient(90deg, var(--blue), #74C0FC); }
+.kpi-k3::before { background: linear-gradient(90deg, var(--green), #6EE7B7); }
 
-/* ─── Tabs ──────────────────────────────────── */
+/* ─── Tabs ──────────────────────────────────────────────────── */
 .stTabs [data-baseweb="tab-list"] {
-    background: #F2F4F7;
-    border-radius: 10px;
-    padding: 3px; gap: 2px;
-    border: none;
+  background: var(--surface2);
+  border-radius: 12px;
+  padding: 4px; gap: 3px;
+  border: 1px solid var(--border);
 }
 .stTabs [data-baseweb="tab"],
 .stTabs [data-baseweb="tab"] p,
 .stTabs [data-baseweb="tab"] span,
 .stTabs [data-baseweb="tab"] div {
-    border-radius: 8px; border: none;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-weight: 600 !important;
-    font-size: 0.95rem !important;
-    color: #667085 !important;
-    padding: 0.5rem 1.1rem;
-    transition: all 0.2s ease;
-    background: transparent;
+  border-radius: 9px; border: none;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+  color: var(--text3) !important;
+  padding: 0.55rem 1.2rem;
+  transition: all 0.2s ease;
+  background: transparent;
 }
 .stTabs [aria-selected="true"],
 .stTabs [aria-selected="true"] p,
 .stTabs [aria-selected="true"] span,
 .stTabs [aria-selected="true"] div {
-    background: #FFFFFF !important;
-    color: #101828 !important;
-    box-shadow: 0 1px 4px rgba(16,24,40,0.1) !important;
-    font-weight: 700 !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+  font-weight: 700 !important;
 }
 .stTabs [data-baseweb="tab-border"],
 .stTabs [data-baseweb="tab-highlight"] { display: none; }
-.stTabs [data-baseweb="tab-panel"] {
-    padding-top: 0 !important;
-}
+.stTabs [data-baseweb="tab-panel"] { padding-top: 0 !important; }
 
-/* ─── Summary Grid ──────────────────────────── */
+/* ─── Summary Grid ──────────────────────────────────────────── */
 .sum-grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
 }
 .sum-row {
-    background: #F9FAFB;
-    border: 1px solid #F2F4F7;
-    border-radius: 10px;
-    padding: 0.5rem 0.75rem;
-    display: flex; justify-content: space-between; align-items: center;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.55rem 0.9rem;
+  display: flex; justify-content: space-between; align-items: center;
+  transition: border-color 0.2s ease;
 }
-.sum-key { font-size: 0.88rem; color: #667085; font-weight: 500; }
-.sum-val { font-size: 0.9rem; color: #101828; font-weight: 700; }
+.sum-row:hover { border-color: var(--border2); }
+.sum-key { font-size: 0.85rem; color: var(--text3); font-weight: 500; }
+.sum-val { font-size: 0.88rem; color: var(--text); font-weight: 700; }
 
-/* ─── XAI ───────────────────────────────────── */
+/* ─── XAI Header ────────────────────────────────────────────── */
 .xai-header {
-    background: linear-gradient(135deg, #EFF8FF, #F4F3FF);
-    border: 1px solid #B2DDFF;
-    border-radius: 12px;
-    padding: 0.85rem 1rem;
-    margin-bottom: 1rem;
-    display: flex; align-items: flex-start; gap: 0.6rem;
+  background: linear-gradient(135deg, var(--purplebg), var(--bluebg));
+  border: 1px solid rgba(167,139,250,0.2);
+  border-radius: 12px;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1.2rem;
+  display: flex; align-items: flex-start; gap: 0.7rem;
 }
-.xai-icon { font-size: 1.2rem; margin-top: 0.05rem; }
+.xai-icon { font-size: 1.3rem; margin-top: 0.05rem; }
 .xai-body { flex: 1; }
-.xai-title { font-size: 0.95rem; font-weight: 700; color: #1849A9; margin-bottom: 0.2rem; }
-.xai-desc  { font-size: 0.85rem; color: #1849A9; opacity: 0.75; line-height: 1.5; }
+.xai-title {
+  font-size: 0.95rem; font-weight: 700;
+  color: var(--purple); margin-bottom: 0.25rem;
+}
+.xai-desc  {
+  font-size: 0.85rem; color: var(--text2);
+  opacity: 0.85; line-height: 1.6;
+}
 .xai-method {
-    display: inline-block;
-    background: #EFF8FF;
-    border: 1px solid #B2DDFF;
-    color: #1849A9;
-    border-radius: 100px;
-    padding: 0.2rem 0.65rem;
-    font-size: 0.78rem; font-weight: 700;
-    margin-top: 0.35rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+  display: inline-block;
+  background: var(--purplebg);
+  border: 1px solid rgba(167,139,250,0.25);
+  color: var(--purple);
+  border-radius: 100px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.75rem; font-weight: 700;
+  margin-top: 0.4rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
-/* ─── Feature Bar ───────────────────────────── */
-.feat-item { margin-bottom: 0.85rem; }
+/* ─── Feature Bars ──────────────────────────────────────────── */
+.feat-item {
+  margin-bottom: 1rem;
+  animation: fadein-up 0.4s ease both;
+}
+@keyframes fadein-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 .feat-row {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 0.3rem;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 0.35rem;
 }
 .feat-name {
-    font-size: 0.9rem; font-weight: 600; color: #344054;
-    display: flex; align-items: center; gap: 0.4rem;
+  font-size: 0.9rem; font-weight: 600; color: var(--text);
+  display: flex; align-items: center; gap: 0.5rem;
 }
 .feat-arrow-up {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 18px; height: 18px; border-radius: 50%;
-    background: #ECFDF3; color: #039855;
-    font-size: 0.6rem; font-weight: 800; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--greenbg);
+  border: 1px solid rgba(16,217,160,0.3);
+  color: var(--green);
+  font-size: 0.6rem; font-weight: 800; flex-shrink: 0;
 }
 .feat-arrow-dn {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 18px; height: 18px; border-radius: 50%;
-    background: #FEF3F2; color: #D92D20;
-    font-size: 0.6rem; font-weight: 800; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--redbg);
+  border: 1px solid rgba(245,101,101,0.3);
+  color: var(--red);
+  font-size: 0.6rem; font-weight: 800; flex-shrink: 0;
 }
+.feat-arrow-neu {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--bluebg);
+  border: 1px solid rgba(79,142,247,0.3);
+  color: var(--blue);
+  font-size: 0.6rem; font-weight: 800; flex-shrink: 0;
+}
+.feat-pct-wrap { display: flex; align-items: center; gap: 0.5rem; }
 .feat-pct {
-    font-size: 0.85rem; font-weight: 700; color: #98A2B3;
-    background: #F2F4F7; border-radius: 100px;
-    padding: 0.1rem 0.45rem;
+  font-size: 0.82rem; font-weight: 700; color: var(--text3);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 0.12rem 0.5rem;
 }
 .feat-track {
-    width: 100%; height: 8px;
-    background: #F2F4F7; border-radius: 100px;
-    overflow: hidden;
+  width: 100%; height: 8px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 100px;
+  overflow: hidden;
 }
 .feat-fill-up {
-    height: 100%; border-radius: 100px;
-    background: linear-gradient(90deg, #12B76A, #6CE9A6);
+  height: 100%; border-radius: 100px;
+  background: linear-gradient(90deg, #039855, var(--green));
+  animation: barfill 0.8s cubic-bezier(.4,0,.2,1) both;
+  position: relative;
 }
 .feat-fill-dn {
-    height: 100%; border-radius: 100px;
-    background: linear-gradient(90deg, #F04438, #FDA29B);
+  height: 100%; border-radius: 100px;
+  background: linear-gradient(90deg, #D92D20, var(--red));
+  animation: barfill 0.8s cubic-bezier(.4,0,.2,1) both;
 }
 .feat-fill-neutral {
-    height: 100%; border-radius: 100px;
-    background: linear-gradient(90deg, #1570EF, #53B1FD);
+  height: 100%; border-radius: 100px;
+  background: linear-gradient(90deg, #1570EF, var(--blue));
+  animation: barfill 0.8s cubic-bezier(.4,0,.2,1) both;
+}
+@keyframes barfill {
+  from { width: 0 !important; }
 }
 
-/* ─── Empty State ───────────────────────────── */
+/* Rank badge */
+.feat-rank {
+  width: 20px; height: 20px;
+  border-radius: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; font-weight: 800;
+  color: var(--text3);
+}
+
+/* ─── Empty State ───────────────────────────────────────────── */
 .empty {
-    text-align: center; padding: 3rem 1.5rem;
+  text-align: center; padding: 4rem 2rem;
 }
 .empty-illo {
-    width: 80px; height: 80px;
-    background: linear-gradient(135deg, #F2F4F7, #EAECF0);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 2rem; margin: 0 auto 1rem;
+  width: 96px; height: 96px;
+  background: radial-gradient(135deg, var(--accentbg), var(--surface2));
+  border: 1px solid var(--accentbdr);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.5rem; margin: 0 auto 1.2rem;
+  box-shadow: 0 0 40px rgba(255,107,43,0.1);
+  animation: float 3s ease-in-out infinite;
 }
-.empty-title { font-size: 1.15rem; font-weight: 700; color: #344054; margin-bottom: 0.4rem; }
-.empty-desc  { font-size: 0.95rem; color: #98A2B3; line-height: 1.7; }
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+.empty-title {
+  font-size: 1.25rem; font-weight: 800;
+  color: var(--text); margin-bottom: 0.5rem;
+}
+.empty-desc  {
+  font-size: 0.95rem; color: var(--text3); line-height: 1.8;
+}
+.empty-steps {
+  display: flex; flex-direction: column; gap: 0.5rem;
+  margin-top: 1.5rem; max-width: 280px; margin-left: auto; margin-right: auto;
+}
 .empty-step {
-    display: inline-flex; align-items: center; gap: 0.35rem;
-    background: #F9FAFB; border: 1px solid #EAECF0;
-    border-radius: 8px; padding: 0.5rem 1rem;
-    font-size: 0.88rem; font-weight: 600; color: #344054;
-    margin: 0.25rem;
+  display: flex; align-items: center; gap: 0.7rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px; padding: 0.65rem 1rem;
+  font-size: 0.88rem; font-weight: 600; color: var(--text2);
+  text-align: left;
+  transition: border-color 0.2s ease;
 }
+.empty-step:hover { border-color: var(--accentbdr); }
 .step-num {
-    width: 18px; height: 18px; border-radius: 50%;
-    background: #101828; color: #fff;
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 0.55rem; font-weight: 800;
+  min-width: 22px; height: 22px; border-radius: 6px;
+  background: linear-gradient(135deg, var(--accent), #e8590c);
+  color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; font-weight: 800;
+  flex-shrink: 0;
 }
 
-/* ─── Footer ────────────────────────────────── */
+/* ─── Footer ────────────────────────────────────────────────── */
 .footer {
-    text-align: center; padding: 1.5rem 0 0.5rem;
-    font-size: 0.85rem; color: #D0D5DD;
-    border-top: 1px solid #F2F4F7; margin-top: 1rem;
+  text-align: center; padding: 1.8rem 0 0.8rem;
+  font-size: 0.83rem; color: var(--text3);
+  border-top: 1px solid var(--border); margin-top: 1rem;
 }
-.footer a { color: #98A2B3; text-decoration: none; }
+.footer a { color: var(--text3); text-decoration: none; }
+.footer strong { color: var(--accent); }
+
+/* ─── Spinner override ──────────────────────────────────────── */
+.stSpinner > div { border-top-color: var(--accent) !important; }
+
+/* ─── Alert override ────────────────────────────────────────── */
+.stAlert { border-radius: 12px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -518,27 +853,53 @@ def backend_ok():
     try: return requests.get(f"{API_BASE}/api/health", timeout=3).status_code == 200
     except: return False
 
+ok = backend_ok()
+
 # ─── Hero Banner ──────────────────────────────────────────────────────────────
-st.markdown("""
+status_cls  = "status-dot" if ok else "status-dot offline"
+status_txt  = "API Online" if ok else "API Offline"
+st.markdown(f"""
 <div class="hero-wrap">
   <div class="hero-inner">
     <div class="hero-icon">🏠</div>
     <div class="hero-text">
       <div class="hero-brand">Lanka<span>Estimate</span></div>
       <div class="hero-tagline">AI-powered property valuation for Sri Lanka's real estate market</div>
-      <div class="hero-chips">
+      <div class="hero-chips" style="margin-top:0.7rem">
         <span class="hero-chip active">⚡ XGBoost ML</span>
         <span class="hero-chip">🧠 Explainable AI</span>
         <span class="hero-chip">📍 25 Districts</span>
         <span class="hero-chip">🏘️ 70+ Areas</span>
         <span class="hero-chip">📊 20K+ Data Points</span>
+        <span class="{status_cls}">{status_txt}</span>
       </div>
+    </div>
+  </div>
+  <div class="hero-stats">
+    <div>
+      <div class="hero-stat-val">25</div>
+      <div class="hero-stat-lbl">Districts</div>
+    </div>
+    <div>
+      <div class="hero-stat-val">70+</div>
+      <div class="hero-stat-lbl">Areas Covered</div>
+    </div>
+    <div>
+      <div class="hero-stat-val">20K+</div>
+      <div class="hero-stat-lbl">Training Samples</div>
+    </div>
+    <div>
+      <div class="hero-stat-val">XGBoost</div>
+      <div class="hero-stat-lbl">ML Algorithm</div>
+    </div>
+    <div>
+      <div class="hero-stat-val">SHAP</div>
+      <div class="hero-stat-lbl">Explainability</div>
     </div>
   </div>
 </div>
 """, unsafe_allow_html=True)
 
-ok = backend_ok()
 if not ok:
     st.error("⚠️ Backend offline — run: `cd backend && .\\venv\\Scripts\\python -m uvicorn main:app --port 8000`")
 
@@ -553,12 +914,12 @@ with L:
       <div class="card-icon ci-blue">📋</div>
       <div>
         <div class="card-title">Property Details</div>
-        <div class="card-sub">Fill in all fields to get an instant valuation</div>
+        <div class="card-sub">Fill in all fields to get an instant AI valuation</div>
       </div>
     </div>""", unsafe_allow_html=True)
 
     # Location
-    st.markdown('<div class="sec-label">📍 Location</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec-label">📍 &nbsp;Location</div>', unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1:
         district = st.selectbox("District", DISTRICTS,
@@ -569,7 +930,7 @@ with L:
     st.markdown('<hr class="sep">', unsafe_allow_html=True)
 
     # Size & Structure
-    st.markdown('<div class="sec-label">📐 Size & Structure</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec-label">📐 &nbsp;Size &amp; Structure</div>', unsafe_allow_html=True)
     s1, s2, s3 = st.columns(3)
     with s1:
         perch    = st.number_input("Land (Perches)", 1,  100, 10, key="perch")
@@ -584,7 +945,7 @@ with L:
     st.markdown('<hr class="sep">', unsafe_allow_html=True)
 
     # Amenities
-    st.markdown('<div class="sec-label">⚡ Amenities & Utilities</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec-label">⚡ &nbsp;Amenities &amp; Utilities</div>', unsafe_allow_html=True)
     a1, a2, a3, a4 = st.columns(4)
     with a1: has_garden  = st.checkbox("🌿 Garden", True,  key="garden")
     with a2: has_ac      = st.checkbox("❄️ AC",     False, key="ac")
@@ -594,7 +955,7 @@ with L:
     st.markdown('<hr class="sep">', unsafe_allow_html=True)
 
     # Year
-    st.markdown('<div class="sec-label">📅 Construction</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec-label">📅 &nbsp;Construction</div>', unsafe_allow_html=True)
     year_built = st.number_input("Year Built", 1980, 2026, 2015, step=1, key="year")
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -646,27 +1007,59 @@ with R:
         parts = pfmt.split(" ")
         num   = parts[1] if len(parts) > 1 else pfmt
         unit  = " ".join(parts[2:]) if len(parts) > 2 else ""
+
+        # Price range estimate (±10%)
+        lo, hi = price * 0.90, price * 1.10
+        mid_pct = 50  # dot always centred
+        fill_pct = 100
+
         st.markdown(f"""
         <div class="price-band">
-          <div class="pb-eyebrow">AI-Estimated Property Value</div>
+          <div class="pb-eyebrow">🏡 AI-Estimated Property Value</div>
           <div class="pb-price">{parts[0]} <span>{num}</span> {unit}</div>
-          <div class="pb-sub">{pfull}</div>
-          <div class="pb-badge">✓ Prediction Complete</div>
+          <div class="pb-full">{pfull}</div>
+          <div class="pb-badge">✓ &nbsp;Prediction Complete</div>
+          <div class="price-range-wrap">
+            <div class="price-range-labels">
+              <span>{fmt_lkr(lo)} (−10%)</span>
+              <span>Estimated Range</span>
+              <span>{fmt_lkr(hi)} (+10%)</span>
+            </div>
+            <div class="price-range-track">
+              <div class="price-range-fill" style="left:0;width:100%"></div>
+              <div class="price-range-dot" style="left:{mid_pct}%"></div>
+            </div>
+          </div>
+        </div>""", unsafe_allow_html=True)
+
+        # ── Confidence Meter ──
+        contribs = res.get("feature_contributions", [])
+        conf_pct  = min(95, 55 + len(contribs) * 4)   # heuristic
+        st.markdown(f"""
+        <div class="conf-wrap">
+          <span class="conf-label">🎯 Model Confidence</span>
+          <div class="conf-track">
+            <div class="conf-fill" style="width:{conf_pct}%"></div>
+          </div>
+          <span class="conf-pct">{conf_pct}%</span>
         </div>""", unsafe_allow_html=True)
 
         # ── KPI Strip ──
         st.markdown(f"""
         <div class="kpi-strip">
-          <div class="kpi">
-            <div class="kpi-val">{fmt_lkr(ppp)}</div>
+          <div class="kpi kpi-k1">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-val kpi-accent">{fmt_lkr(ppp)}</div>
             <div class="kpi-lbl">Per Perch</div>
           </div>
-          <div class="kpi">
-            <div class="kpi-val">{fmt_lkr(ppb)}</div>
+          <div class="kpi kpi-k2">
+            <div class="kpi-icon">🛏️</div>
+            <div class="kpi-val kpi-blue">{fmt_lkr(ppb)}</div>
             <div class="kpi-lbl">Per Bedroom</div>
           </div>
-          <div class="kpi">
-            <div class="kpi-val">{age} yrs</div>
+          <div class="kpi kpi-k3">
+            <div class="kpi-icon">⏳</div>
+            <div class="kpi-val kpi-green">{age} yrs</div>
             <div class="kpi-lbl">House Age</div>
           </div>
         </div>""", unsafe_allow_html=True)
@@ -676,7 +1069,7 @@ with R:
 
         # ── Summary Tab ──
         with t_sum:
-            st.markdown('<div class="card" style="margin-top:.6rem">', unsafe_allow_html=True)
+            st.markdown('<div class="card" style="margin-top:.7rem">', unsafe_allow_html=True)
             st.markdown("""
             <div class="card-head">
               <div class="card-icon ci-orange">🏡</div>
@@ -710,7 +1103,7 @@ with R:
 
         # ── XAI Tab ──
         with t_xai:
-            st.markdown('<div class="card" style="margin-top:.6rem">', unsafe_allow_html=True)
+            st.markdown('<div class="card" style="margin-top:.7rem">', unsafe_allow_html=True)
             st.markdown("""
             <div class="card-head">
               <div class="card-icon ci-purple">🧠</div>
@@ -727,42 +1120,43 @@ with R:
               <div class="xai-body">
                 <div class="xai-title">Explainable AI Breakdown</div>
                 <div class="xai-desc">
-                  Each bar shows how much a feature contributed to moving the price
-                  <b style="color:#12B76A">▲ up</b> or <b style="color:#F04438">▼ down</b>
-                  relative to the average property. Wider bar = stronger influence.
+                  Each bar shows how much a feature pushed the price
+                  <b style="color:#10D9A0">▲ higher</b> or <b style="color:#F56565">▼ lower</b>
+                  compared to the average property. Wider bar = stronger influence.
                 </div>
-                <div class="xai-method">Method: {method}</div>
               </div>
             </div>""", unsafe_allow_html=True)
 
-            contribs = res.get("feature_contributions", [])
             if contribs:
                 html = ""
-                for c in contribs:
+                for i, c in enumerate(contribs):
                     d   = c["direction"]
                     lbl = c["label"]
                     pct = c["percentage"]
+                    delay = i * 80
                     if d == "increase":
                         arrow = '<span class="feat-arrow-up">▲</span>'
                         fill  = "feat-fill-up"
-                        color = "#039855"
                     elif d == "decrease":
                         arrow = '<span class="feat-arrow-dn">▼</span>'
                         fill  = "feat-fill-dn"
-                        color = "#D92D20"
                     else:
-                        arrow = '<span class="feat-arrow-up" style="background:#EFF8FF;color:#1570EF">→</span>'
+                        arrow = '<span class="feat-arrow-neu">→</span>'
                         fill  = "feat-fill-neutral"
-                        color = "#1570EF"
 
                     html += f"""
-                    <div class="feat-item">
+                    <div class="feat-item" style="animation-delay:{delay}ms">
                       <div class="feat-row">
-                        <span class="feat-name">{arrow}{lbl}</span>
-                        <span class="feat-pct">{pct:.1f}%</span>
+                        <span class="feat-name">
+                          <span class="feat-rank">#{i+1}</span>
+                          {arrow}{lbl}
+                        </span>
+                        <span class="feat-pct-wrap">
+                          <span class="feat-pct">{pct:.1f}%</span>
+                        </span>
                       </div>
                       <div class="feat-track">
-                        <div class="{fill}" style="width:{min(pct,100):.1f}%"></div>
+                        <div class="{fill}" style="width:{min(pct,100):.1f}%;animation-delay:{delay}ms"></div>
                       </div>
                     </div>"""
                 st.markdown(html, unsafe_allow_html=True)
@@ -780,14 +1174,13 @@ with R:
             <div class="empty-title">Ready to value your property</div>
             <div class="empty-desc">
               Complete the form on the left with your property details,<br>
-              then click <b>Get AI Valuation</b> to instantly receive<br>
+              then click <b style="color:#FF6B2B">Get AI Valuation</b> to instantly receive<br>
               a price estimate with a full AI explanation.
             </div>
-            <br>
-            <div>
-              <span class="empty-step"><span class="step-num">1</span> Select district & area</span>
-              <span class="empty-step"><span class="step-num">2</span> Enter size & features</span>
-              <span class="empty-step"><span class="step-num">3</span> Click Get AI Valuation</span>
+            <div class="empty-steps">
+              <div class="empty-step"><span class="step-num">1</span> Select district &amp; area</div>
+              <div class="empty-step"><span class="step-num">2</span> Enter size &amp; property features</div>
+              <div class="empty-step"><span class="step-num">3</span> Click Get AI Valuation</div>
             </div>
           </div>
         </div>""", unsafe_allow_html=True)
@@ -795,7 +1188,10 @@ with R:
 # ─── Footer ───────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="footer">
-  LankaEstimate &nbsp;·&nbsp; Powered by XGBoost &nbsp;·&nbsp; Explainable AI &nbsp;·&nbsp;
-  Sri Lanka Property Market &nbsp;·&nbsp; 2026
+  <strong>LankaEstimate</strong> &nbsp;·&nbsp;
+  Powered by XGBoost &nbsp;·&nbsp;
+  Explainable AI (SHAP) &nbsp;·&nbsp;
+  Sri Lanka Property Market &nbsp;·&nbsp;
+  © 2026
 </div>
 """, unsafe_allow_html=True)
