@@ -8,8 +8,8 @@ import os
 
 app = FastAPI(
     title="Sri Lanka House Price Predictor",
-    description="Predict house prices across Sri Lanka using Machine Learning",
-    version="1.0.0",
+    description="Predict house prices across Sri Lanka using ML with Explainable AI",
+    version="2.0.0",
 )
 
 app.add_middleware(
@@ -20,14 +20,39 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Load pre-built .pkl model ──────────────────────────────────────────────────
+# ── Load model ─────────────────────────────────────────────────────────────────
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "house_price_model.pkl")
 
 with open(MODEL_PATH, "rb") as f:
     model = pickle.load(f)
 
-print(f"Model loaded successfully from {MODEL_PATH}")
-print(f"Model type: {type(model)}")
+print(f"Model loaded: {type(model).__name__}")
+
+# ── Try SHAP TreeExplainer (XGBoost 2.x has known compatibility issues) ────────
+EXPLAINER     = None
+EXPLAINER_TYPE = "importance"   # "shap" | "importance"
+
+try:
+    import shap
+    # Attempt 1: sklearn wrapper
+    try:
+        EXPLAINER = shap.TreeExplainer(model)
+        _test_sv  = EXPLAINER.shap_values(pd.DataFrame(
+            [np.zeros(len(model.feature_importances_))]
+        ))
+        EXPLAINER_TYPE = "shap"
+        print("SHAP TreeExplainer (sklearn wrapper) ready.")
+    except Exception as _e1:
+        # Attempt 2: raw booster
+        try:
+            booster = model.get_booster()
+            EXPLAINER = shap.TreeExplainer(booster)
+            EXPLAINER_TYPE = "shap"
+            print("SHAP TreeExplainer (booster) ready.")
+        except Exception as _e2:
+            print(f"SHAP unavailable ({_e2}). Using XGBoost feature-importance fallback.")
+except ImportError:
+    print("SHAP not installed. Using XGBoost feature-importance fallback.")
 
 # ── Feature Constants ──────────────────────────────────────────────────────────
 DISTRICTS = [
@@ -43,7 +68,8 @@ AREAS = {
     "Anuradhapura": ["Madawachchiya", "New Town", "Nuwaragam Palatha"],
     "Badulla": ["Badulla Town", "Bandarawela", "Hali Ela"],
     "Batticaloa": ["Batticaloa Town", "Eravur", "Kallady"],
-    "Colombo": ["Bambalapitiya", "Borella", "Dehiwala", "Kollupitiya", "Mount Lavinia", "Narahenpita", "Nugegoda", "Rajagiriya", "Wellawatte"],
+    "Colombo": ["Bambalapitiya", "Borella", "Dehiwala", "Kollupitiya", "Mount Lavinia",
+                 "Narahenpita", "Nugegoda", "Rajagiriya", "Wellawatte"],
     "Galle": ["Galle Fort", "Hikkaduwa", "Karapitiya", "Unawatuna"],
     "Gampaha": ["Gampaha Town", "Ja-Ela", "Kadawatha", "Negombo", "Ragama", "Wattala"],
     "Hambantota": ["Ambalantota", "Hambantota Town", "Tangalle"],
@@ -67,15 +93,11 @@ AREAS = {
 }
 
 WATER_SUPPLY_OPTIONS = ["Both", "Pipe-borne", "Well"]
-ELECTRICITY_OPTIONS = ["Single phase", "Three phase"]
+ELECTRICITY_OPTIONS  = ["Single phase", "Three phase"]
 
-# Exact feature names the pkl model was trained on (108 total).
-# Extracted directly from the XGBoost feature_names mismatch error.
-# ALL categories are included - no reference-category dropping.
 MODEL_FEATURE_NAMES = [
     "perch", "bedrooms", "bathrooms", "kitchen_area_sqft", "parking_spots",
     "has_garden", "has_ac", "floors", "house_age",
-    # District one-hot (25 districts)
     "district_Ampara", "district_Anuradhapura", "district_Badulla",
     "district_Batticaloa", "district_Colombo", "district_Galle",
     "district_Gampaha", "district_Hambantota", "district_Jaffna",
@@ -85,7 +107,6 @@ MODEL_FEATURE_NAMES = [
     "district_Mullaitivu", "district_Nuwara Eliya", "district_Polonnaruwa",
     "district_Puttalam", "district_Ratnapura", "district_Trincomalee",
     "district_Vavuniya",
-    # Area one-hot (all areas)
     "area_Akurugoda", "area_Ambalantota", "area_Ampara Central",
     "area_Badulla Town", "area_Bambalapitiya", "area_Bandarawela",
     "area_Batticaloa Town", "area_Beruwala", "area_Borella",
@@ -109,169 +130,229 @@ MODEL_FEATURE_NAMES = [
     "area_Tennekumbura", "area_Unawatuna", "area_Uppuveli",
     "area_Vavuniya Central", "area_Wadduwa", "area_Wattala",
     "area_Weligama", "area_Wellawatte",
-    # Water supply - ALL 3 categories (no reference dropping)
     "water_supply_Both", "water_supply_Pipe-borne", "water_supply_Well",
-    # Electricity - BOTH categories (no reference dropping)
     "electricity_Single phase", "electricity_Three phase",
 ]
+
+FEATURE_LABELS = {
+    "perch":             "Land Size (Perches)",
+    "bedrooms":          "Bedrooms",
+    "bathrooms":         "Bathrooms",
+    "kitchen_area_sqft": "Kitchen Area (sq ft)",
+    "parking_spots":     "Parking Spots",
+    "has_garden":        "Garden",
+    "has_ac":            "Air Conditioning",
+    "floors":            "Number of Floors",
+    "house_age":         "House Age (years)",
+}
+
+def _label(fname: str) -> str:
+    if fname in FEATURE_LABELS:
+        return FEATURE_LABELS[fname]
+    if fname.startswith("district_"):    return f"District: {fname[9:]}"
+    if fname.startswith("area_"):        return f"Area: {fname[5:]}"
+    if fname.startswith("water_supply_"):return f"Water Supply: {fname[13:]}"
+    if fname.startswith("electricity_"): return f"Electricity: {fname[12:]}"
+    return fname
+
+# Pre-compute gain-based feature importances (fallback)
+GAIN_IMPORTANCES = dict(zip(MODEL_FEATURE_NAMES,
+                             model.feature_importances_.tolist()))
 
 
 # ── Pydantic Models ────────────────────────────────────────────────────────────
 class HouseInput(BaseModel):
-    district: str = Field(..., description="District name")
-    area: str = Field(..., description="Area name within the district")
-    perch: int = Field(..., ge=1, le=100, description="Land size in perches")
-    bedrooms: int = Field(..., ge=1, le=10, description="Number of bedrooms")
-    bathrooms: int = Field(..., ge=1, le=10, description="Number of bathrooms")
-    kitchen_area_sqft: int = Field(..., ge=20, le=300, description="Kitchen area in sq ft")
-    parking_spots: int = Field(..., ge=0, le=5, description="Number of parking spots")
-    has_garden: bool = Field(..., description="Whether the house has a garden")
-    has_ac: bool = Field(..., description="Whether the house has AC")
-    water_supply: str = Field(..., description="Water supply type")
-    electricity: str = Field(..., description="Electricity type")
-    floors: int = Field(..., ge=1, le=5, description="Number of floors")
-    year_built: int = Field(..., ge=1980, le=2026, description="Year the house was built")
+    district:          str = Field(...)
+    area:              str = Field(...)
+    perch:             int = Field(..., ge=1,   le=100)
+    bedrooms:          int = Field(..., ge=1,   le=10)
+    bathrooms:         int = Field(..., ge=1,   le=10)
+    kitchen_area_sqft: int = Field(..., ge=20,  le=300)
+    parking_spots:     int = Field(..., ge=0,   le=5)
+    has_garden:       bool = Field(...)
+    has_ac:           bool = Field(...)
+    water_supply:      str = Field(...)
+    electricity:       str = Field(...)
+    floors:            int = Field(..., ge=1,   le=5)
+    year_built:        int = Field(..., ge=1980, le=2026)
+
+
+class FeatureContribution(BaseModel):
+    feature:       str
+    label:         str
+    value:         float   # shap value or importance score
+    direction:     str     # "increase" | "decrease" | "neutral"
+    percentage:    float
+    method:        str     # "shap" | "gain_importance"
 
 
 class PredictionResponse(BaseModel):
-    predicted_price_lkr: float
-    predicted_price_formatted: str
-    input_summary: dict
+    predicted_price_lkr:       float
+    predicted_price_formatted:  str
+    base_price_lkr:            float
+    input_summary:             dict
+    feature_contributions:     list[FeatureContribution]
+    explainer_method:          str
 
 
 class OptionsResponse(BaseModel):
-    districts: list[str]
-    areas: dict[str, list[str]]
+    districts:            list[str]
+    areas:                dict[str, list[str]]
     water_supply_options: list[str]
-    electricity_options: list[str]
+    electricity_options:  list[str]
 
 
 # ── Feature Engineering ────────────────────────────────────────────────────────
 def build_feature_dataframe(house: HouseInput) -> pd.DataFrame:
-    """Build a DataFrame with exactly the 108 features the model expects.
-
-    ALL categorical columns are one-hot encoded with every category present
-    (no reference-category dropping), matching the training-time pd.get_dummies
-    behaviour with drop_first=False.
-    """
     house_age = 2025 - house.year_built
-
-    # Start with all features set to zero
     row = {col: 0.0 for col in MODEL_FEATURE_NAMES}
-
-    # Numerical features
-    row["perch"] = float(house.perch)
-    row["bedrooms"] = float(house.bedrooms)
-    row["bathrooms"] = float(house.bathrooms)
+    row["perch"]             = float(house.perch)
+    row["bedrooms"]          = float(house.bedrooms)
+    row["bathrooms"]         = float(house.bathrooms)
     row["kitchen_area_sqft"] = float(house.kitchen_area_sqft)
-    row["parking_spots"] = float(house.parking_spots)
-    row["has_garden"] = 1.0 if house.has_garden else 0.0
-    row["has_ac"] = 1.0 if house.has_ac else 0.0
-    row["floors"] = float(house.floors)
-    row["house_age"] = float(house_age)
-
-    # District one-hot
-    d_col = f"district_{house.district}"
-    if d_col in row:
-        row[d_col] = 1.0
-
-    # Area one-hot
-    a_col = f"area_{house.area}"
-    if a_col in row:
-        row[a_col] = 1.0
-
-    # Water supply one-hot (all 3 categories encoded)
-    ws_col = f"water_supply_{house.water_supply}"
-    if ws_col in row:
-        row[ws_col] = 1.0
-
-    # Electricity one-hot (both categories encoded)
-    el_col = f"electricity_{house.electricity}"
-    if el_col in row:
-        row[el_col] = 1.0
-
-    # Return DataFrame with columns in exact model order
+    row["parking_spots"]     = float(house.parking_spots)
+    row["has_garden"]        = 1.0 if house.has_garden else 0.0
+    row["has_ac"]            = 1.0 if house.has_ac     else 0.0
+    row["floors"]            = float(house.floors)
+    row["house_age"]         = float(house_age)
+    for col in [f"district_{house.district}", f"area_{house.area}",
+                f"water_supply_{house.water_supply}", f"electricity_{house.electricity}"]:
+        if col in row:
+            row[col] = 1.0
     return pd.DataFrame([row], columns=MODEL_FEATURE_NAMES)
 
 
-# ── Helpers ────────────────────────────────────────────────────────────────────
 def format_lkr(amount: float) -> str:
     if amount >= 1_000_000:
         return f"Rs. {amount / 1_000_000:.2f} Million"
-    elif amount >= 1_000:
+    if amount >= 1_000:
         return f"Rs. {amount / 1_000:.2f}K"
     return f"Rs. {amount:.2f}"
+
+
+def compute_shap_contributions(df: pd.DataFrame) -> tuple[list[FeatureContribution], str]:
+    """Try SHAP first, fall back to gain-based importance."""
+    if EXPLAINER is not None and EXPLAINER_TYPE == "shap":
+        try:
+            sv_raw = EXPLAINER.shap_values(df)
+            sv     = np.array(sv_raw, dtype=float).ravel()
+
+            contribs = []
+            for i, fname in enumerate(MODEL_FEATURE_NAMES):
+                v = float(sv[i])
+                if abs(v) < 1e-6:
+                    continue
+                contribs.append({"feature": fname, "label": _label(fname),
+                                  "value": v, "direction": "increase" if v > 0 else "decrease"})
+
+            contribs.sort(key=lambda x: abs(x["value"]), reverse=True)
+            top = contribs[:10]
+            total = sum(abs(c["value"]) for c in top) or 1.0
+            return [
+                FeatureContribution(feature=c["feature"], label=c["label"],
+                                    value=round(c["value"], 5), direction=c["direction"],
+                                    percentage=round(abs(c["value"]) / total * 100, 1),
+                                    method="shap")
+                for c in top
+            ], "SHAP (TreeExplainer)"
+        except Exception:
+            pass  # fall through to importance fallback
+
+    # ── Gain-based importance fallback ──
+    # For non-zero features blended with global importance
+    feat_vals = df.iloc[0].to_dict()
+    contribs = []
+    for fname, importance in GAIN_IMPORTANCES.items():
+        if importance < 1e-8:
+            continue
+        fv = feat_vals.get(fname, 0.0)
+        # For one-hot features, only include if active (=1)
+        is_ohe = any(fname.startswith(p) for p in ("district_", "area_", "water_", "electricity_"))
+        if is_ohe and fv < 0.5:
+            continue
+        # Weighted score: importance * (value for numerical, 1 for OHE)
+        score = importance * (abs(fv) if not is_ohe else 1.0)
+        contribs.append({"feature": fname, "label": _label(fname),
+                          "value": score, "direction": "increase"})
+
+    contribs.sort(key=lambda x: x["value"], reverse=True)
+    top   = contribs[:10]
+    total = sum(c["value"] for c in top) or 1.0
+    return [
+        FeatureContribution(feature=c["feature"], label=c["label"],
+                            value=round(c["value"], 5), direction="increase",
+                            percentage=round(c["value"] / total * 100, 1),
+                            method="gain_importance")
+        for c in top
+    ], "XGBoost Feature Importance (Gain)"
 
 
 # ── API Routes ─────────────────────────────────────────────────────────────────
 @app.get("/", tags=["Root"])
 async def root():
-    return {
-        "message": "Sri Lanka House Price Prediction API",
-        "version": "1.0.0",
-        "model_type": type(model).__name__,
-        "feature_count": len(MODEL_FEATURE_NAMES),
-    }
+    return {"message": "Sri Lanka House Price Prediction API", "version": "2.0.0",
+            "explainer": EXPLAINER_TYPE, "feature_count": len(MODEL_FEATURE_NAMES)}
 
 
 @app.get("/api/health", tags=["Health"])
 async def health_check():
-    return {
-        "status": "healthy",
-        "model_loaded": True,
-        "model_type": type(model).__name__,
-        "feature_count": len(MODEL_FEATURE_NAMES),
-    }
+    return {"status": "healthy", "model_loaded": True,
+            "explainer_type": EXPLAINER_TYPE, "model_type": type(model).__name__}
 
 
 @app.get("/api/options", response_model=OptionsResponse, tags=["Options"])
 async def get_options():
-    return OptionsResponse(
-        districts=DISTRICTS,
-        areas=AREAS,
-        water_supply_options=WATER_SUPPLY_OPTIONS,
-        electricity_options=ELECTRICITY_OPTIONS,
-    )
+    return OptionsResponse(districts=DISTRICTS, areas=AREAS,
+                           water_supply_options=WATER_SUPPLY_OPTIONS,
+                           electricity_options=ELECTRICITY_OPTIONS)
 
 
 @app.post("/api/predict", response_model=PredictionResponse, tags=["Prediction"])
 async def predict_price(house: HouseInput):
     if house.district not in DISTRICTS:
-        raise HTTPException(status_code=400, detail=f"Invalid district: {house.district}")
+        raise HTTPException(400, f"Invalid district: {house.district}")
     if house.district in AREAS and house.area not in AREAS[house.district]:
-        raise HTTPException(status_code=400, detail=f"Invalid area '{house.area}' for district '{house.district}'")
+        raise HTTPException(400, f"Invalid area '{house.area}' for '{house.district}'")
     if house.water_supply not in WATER_SUPPLY_OPTIONS:
-        raise HTTPException(status_code=400, detail=f"Invalid water supply: {house.water_supply}")
+        raise HTTPException(400, f"Invalid water supply: {house.water_supply}")
     if house.electricity not in ELECTRICITY_OPTIONS:
-        raise HTTPException(status_code=400, detail=f"Invalid electricity: {house.electricity}")
+        raise HTTPException(400, f"Invalid electricity: {house.electricity}")
 
     try:
         df = build_feature_dataframe(house)
-        log_prediction = model.predict(df)
-        # Model was trained on log-transformed prices — reverse with exp()
-        predicted_price = max(float(np.exp(np.array(log_prediction).ravel()[0])), 0)
+
+        log_pred        = float(np.squeeze(model.predict(df)))
+        predicted_price = max(float(np.exp(log_pred)), 0)
+
+        # Compute base price using mean of log predictions ≈ expected value
+        # We estimate it from the model's base score or use a fixed reference
+        try:
+            base_log   = float(model.get_params().get("base_score", 0.5))
+            base_price = float(np.exp(base_log))
+        except Exception:
+            base_price = 0.0
+
+        contributions, method = compute_shap_contributions(df)
 
         return PredictionResponse(
             predicted_price_lkr=round(predicted_price, 2),
             predicted_price_formatted=format_lkr(predicted_price),
+            base_price_lkr=round(base_price, 2),
             input_summary={
-                "district": house.district,
-                "area": house.area,
-                "perch": house.perch,
-                "bedrooms": house.bedrooms,
-                "bathrooms": house.bathrooms,
-                "kitchen_area_sqft": house.kitchen_area_sqft,
-                "parking_spots": house.parking_spots,
-                "has_garden": house.has_garden,
-                "has_ac": house.has_ac,
-                "water_supply": house.water_supply,
-                "electricity": house.electricity,
-                "floors": house.floors,
+                "district": house.district, "area": house.area,
+                "perch": house.perch, "bedrooms": house.bedrooms,
+                "bathrooms": house.bathrooms, "kitchen_area_sqft": house.kitchen_area_sqft,
+                "parking_spots": house.parking_spots, "has_garden": house.has_garden,
+                "has_ac": house.has_ac, "water_supply": house.water_supply,
+                "electricity": house.electricity, "floors": house.floors,
                 "year_built": house.year_built,
-            }
+            },
+            feature_contributions=contributions,
+            explainer_method=method,
         )
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+        raise HTTPException(500, f"Prediction failed: {str(e)}")
 
 
 if __name__ == "__main__":
