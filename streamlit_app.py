@@ -1120,48 +1120,116 @@ with R:
               <div class="xai-body">
                 <div class="xai-title">Explainable AI Breakdown</div>
                 <div class="xai-desc">
-                  Each bar shows how much a feature pushed the price
-                  <b style="color:#10D9A0">▲ higher</b> or <b style="color:#F56565">▼ lower</b>
-                  compared to the average property. Wider bar = stronger influence.
+                  Each factor below shows its <b style="color:#10D9A0">positive ▲</b> or
+                  <b style="color:#F56565">negative ▼</b> impact on the estimated price.
+                  The chart visualises the exact SHAP contribution values.
                 </div>
+                <div class="xai-method">Method: {method}</div>
               </div>
             </div>""", unsafe_allow_html=True)
 
-            if contribs:
-                html = ""
-                for i, c in enumerate(contribs):
-                    d   = c["direction"]
-                    lbl = c["label"]
-                    pct = c["percentage"]
-                    delay = i * 80
-                    if d == "increase":
-                        arrow = '<span class="feat-arrow-up">▲</span>'
-                        fill  = "feat-fill-up"
-                    elif d == "decrease":
-                        arrow = '<span class="feat-arrow-dn">▼</span>'
-                        fill  = "feat-fill-dn"
-                    else:
-                        arrow = '<span class="feat-arrow-neu">→</span>'
-                        fill  = "feat-fill-neutral"
+            # ── Sub-tabs: SHAP Chart | Feature Breakdown ──
+            xai_chart_tab, xai_bars_tab = st.tabs(["📊  SHAP Chart", "📋  Feature Breakdown"])
 
-                    html += f"""
-                    <div class="feat-item" style="animation-delay:{delay}ms">
-                      <div class="feat-row">
-                        <span class="feat-name">
-                          <span class="feat-rank">#{i+1}</span>
-                          {arrow}{lbl}
-                        </span>
-                        <span class="feat-pct-wrap">
-                          <span class="feat-pct">{pct:.1f}%</span>
-                        </span>
-                      </div>
-                      <div class="feat-track">
-                        <div class="{fill}" style="width:{min(pct,100):.1f}%;animation-delay:{delay}ms"></div>
-                      </div>
-                    </div>"""
-                st.markdown(html, unsafe_allow_html=True)
-            else:
-                st.info("No explanation data returned from the model.")
+            # ─── SHAP Chart sub-tab ───────────────────────────────────
+            with xai_chart_tab:
+                # Fetch the chart image from the backend
+                shap_state_key = "shap_img_" + str(hash(str(pay)))
+                if shap_state_key not in st.session_state:
+                    with st.spinner("Generating SHAP chart…"):
+                        try:
+                            shap_r = requests.post(
+                                f"{API_BASE}/api/shap-plot",
+                                json=pay, timeout=30
+                            )
+                            if shap_r.status_code == 200:
+                                shap_data = shap_r.json()
+                                st.session_state[shap_state_key] = shap_data
+                            else:
+                                st.session_state[shap_state_key] = {"error": shap_r.text}
+                        except Exception as ex:
+                            st.session_state[shap_state_key] = {"error": str(ex)}
+
+                shap_data = st.session_state.get(shap_state_key, {})
+
+                if "image" in shap_data:
+                    import base64 as _b64
+                    img_bytes = _b64.b64decode(shap_data["image"])
+
+                    # Wrap in a styled dark container
+                    st.markdown("""
+                    <div style="
+                      background:#1A2340;
+                      border:1px solid rgba(255,255,255,0.07);
+                      border-radius:14px;
+                      padding:1rem;
+                      margin-top:0.6rem;
+                    ">""", unsafe_allow_html=True)
+
+                    st.image(img_bytes, use_container_width=True,
+                             caption=f"Method: {shap_data.get('graph_type', method)}")
+
+                    st.markdown("</div>", unsafe_allow_html=True)
+
+                    # How-to-read callout
+                    st.markdown("""
+                    <div style="
+                      display:flex; gap:1.2rem; margin-top:0.8rem;
+                      padding:0.75rem 1rem;
+                      background:rgba(167,139,250,0.07);
+                      border:1px solid rgba(167,139,250,0.18);
+                      border-radius:10px; flex-wrap:wrap;
+                    ">
+                      <span style="font-size:0.83rem;color:#8892A4;font-weight:600;">
+                        📖 <b style="color:#E8EAF0">How to read:</b>
+                        &nbsp;Bars extending <b style="color:#10D9A0">right (green)</b> push the price higher.
+                        &nbsp;Bars extending <b style="color:#F56565">left (red)</b> pull the price lower.
+                        &nbsp;Bar length = magnitude of impact.
+                      </span>
+                    </div>""", unsafe_allow_html=True)
+
+                elif "error" in shap_data:
+                    st.warning(f"⚠️ Could not load SHAP chart: {shap_data['error']}")
+                else:
+                    st.info("SHAP chart not available.")
+
+            # ─── Feature Breakdown sub-tab ────────────────────────────
+            with xai_bars_tab:
+                if contribs:
+                    html = ""
+                    for i, c in enumerate(contribs):
+                        d   = c["direction"]
+                        lbl = c["label"]
+                        pct = c["percentage"]
+                        delay = i * 80
+                        if d == "increase":
+                            arrow = '<span class="feat-arrow-up">▲</span>'
+                            fill  = "feat-fill-up"
+                        elif d == "decrease":
+                            arrow = '<span class="feat-arrow-dn">▼</span>'
+                            fill  = "feat-fill-dn"
+                        else:
+                            arrow = '<span class="feat-arrow-neu">→</span>'
+                            fill  = "feat-fill-neutral"
+
+                        html += f"""
+                        <div class="feat-item" style="animation-delay:{delay}ms">
+                          <div class="feat-row">
+                            <span class="feat-name">
+                              <span class="feat-rank">#{i+1}</span>
+                              {arrow}{lbl}
+                            </span>
+                            <span class="feat-pct-wrap">
+                              <span class="feat-pct">{pct:.1f}%</span>
+                            </span>
+                          </div>
+                          <div class="feat-track">
+                            <div class="{fill}" style="width:{min(pct,100):.1f}%;animation-delay:{delay}ms"></div>
+                          </div>
+                        </div>"""
+                    st.markdown(html, unsafe_allow_html=True)
+                else:
+                    st.info("No explanation data returned from the model.")
 
             st.markdown('</div>', unsafe_allow_html=True)
 

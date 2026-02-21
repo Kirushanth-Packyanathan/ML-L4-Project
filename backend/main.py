@@ -1,10 +1,13 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 import numpy as np
 import pandas as pd
 import pickle
 import os
+import io
+import base64
 
 app = FastAPI(
     title="Sri Lanka House Price Predictor",
@@ -29,32 +32,56 @@ with open(MODEL_PATH, "rb") as f:
 print(f"Model loaded: {type(model).__name__}")
 
 # ── Try SHAP TreeExplainer (XGBoost 2.x has known compatibility issues) ────────
-EXPLAINER     = None
+EXPLAINER      = None
 EXPLAINER_TYPE = "importance"   # "shap" | "importance"
 
-try:
-    import shap
-    # Attempt 1: sklearn wrapper
+def _try_init_shap():
+    global EXPLAINER, EXPLAINER_TYPE
     try:
-        EXPLAINER = shap.TreeExplainer(model)
-        _test_sv  = EXPLAINER.shap_values(pd.DataFrame(
-            [np.zeros(len(model.feature_importances_))]
-        ))
-        EXPLAINER_TYPE = "shap"
-        print("SHAP TreeExplainer (sklearn wrapper) ready.")
-    except Exception as _e1:
-        # Attempt 2: raw booster
+        import shap as _shap
+
+        # Build a properly named smoke-test row (all zeros)
+        _dummy = pd.DataFrame(
+            [[0.0] * len(MODEL_FEATURE_NAMES)],
+            columns=MODEL_FEATURE_NAMES
+        )
+
+        # Attempt 1: sklearn wrapper
         try:
-            booster = model.get_booster()
-            EXPLAINER = shap.TreeExplainer(booster)
+            _exp = _shap.TreeExplainer(model)
+            _sv  = _exp.shap_values(_dummy)   # smoke test
+            _ = float(np.array(_sv).ravel()[0])  # ensure castable
+            EXPLAINER      = _exp
+            EXPLAINER_TYPE = "shap"
+            print("SHAP TreeExplainer (sklearn wrapper) ready.")
+            return
+        except BaseException as _e1:
+            print(f"SHAP attempt 1 failed: {_e1}")
+
+        # Attempt 2: raw XGBoost booster
+        try:
+            _booster = model.get_booster()
+            _exp2    = _shap.TreeExplainer(_booster)
+            _sv2     = _exp2.shap_values(_dummy)
+            _ = float(np.array(_sv2).ravel()[0])
+            EXPLAINER      = _exp2
             EXPLAINER_TYPE = "shap"
             print("SHAP TreeExplainer (booster) ready.")
-        except Exception as _e2:
-            print(f"SHAP unavailable ({_e2}). Using XGBoost feature-importance fallback.")
-except ImportError:
-    print("SHAP not installed. Using XGBoost feature-importance fallback.")
+            return
+        except BaseException as _e2:
+            print(f"SHAP attempt 2 failed: {_e2}")
+
+        print("SHAP unavailable — using XGBoost gain-importance fallback.")
+
+    except ImportError:
+        print("SHAP not installed — using XGBoost gain-importance fallback.")
+    except BaseException as _catch_all:
+        print(f"SHAP init unexpected error: {_catch_all}. Using fallback.")
+
+_try_init_shap()
 
 # ── Feature Constants ──────────────────────────────────────────────────────────
+
 DISTRICTS = [
     "Ampara", "Anuradhapura", "Badulla", "Batticaloa", "Colombo", "Galle",
     "Gampaha", "Hambantota", "Jaffna", "Kalutara", "Kandy",
@@ -353,6 +380,159 @@ async def predict_price(house: HouseInput):
 
     except Exception as e:
         raise HTTPException(500, f"Prediction failed: {str(e)}")
+
+
+# ── SHAP Plot Endpoint ────────────────────────────────────────────────────────
+@app.post("/api/shap-plot", tags=["Explanation"])
+async def shap_plot(house: HouseInput):
+    """Return a base64-encoded PNG of the SHAP waterfall (or importance) chart."""
+    import matplotlib
+    matplotlib.use("Agg")          # headless – no display needed
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as mpatches
+
+    # ── Build feature dataframe ──
+    if house.district not in DISTRICTS:
+        raise HTTPException(400, f"Invalid district: {house.district}")
+
+    df = build_feature_dataframe(house)
+
+    # ── Colour palette (dark theme matching the Streamlit UI) ──
+    BG      = "#141B2D"
+    SURFACE = "#1A2340"
+    TEXT    = "#E8EAF0"
+    TEXT2   = "#8892A4"
+    GREEN   = "#10D9A0"
+    RED     = "#F56565"
+    BLUE    = "#4F8EF7"
+    ORANGE  = "#FF6B2B"
+    GRID    = "rgba(255,255,255,0.06)"
+
+    try:
+        # ════════════ SHAP waterfall path ════════════
+        if EXPLAINER is not None and EXPLAINER_TYPE == "shap":
+            import shap
+            sv_raw = EXPLAINER.shap_values(df)
+            sv     = np.array(sv_raw, dtype=float).ravel()
+
+            # Build (label, value) pairs, sort by |value|, take top 10
+            pairs = []
+            for i, fname in enumerate(MODEL_FEATURE_NAMES):
+                v = float(sv[i])
+                if abs(v) < 1e-4:
+                    continue
+                pairs.append((_label(fname), v))
+            pairs.sort(key=lambda x: abs(x[1]), reverse=True)
+            pairs = pairs[:10]
+            pairs.reverse()          # bottom-to-top so largest is at top
+
+            labels = [p[0] for p in pairs]
+            values = [p[1] for p in pairs]
+            colors = [GREEN if v > 0 else RED for v in values]
+
+            fig, ax = plt.subplots(figsize=(9, 5))
+            fig.patch.set_facecolor(BG)
+            ax.set_facecolor(SURFACE)
+
+            bars = ax.barh(labels, values, color=colors,
+                           height=0.6, edgecolor="none", zorder=3)
+
+            # Value annotations
+            for bar, val in zip(bars, values):
+                sign = "+" if val > 0 else ""
+                ax.text(
+                    bar.get_width() + (max(abs(v) for v in values) * 0.015 * (1 if val > 0 else -1)),
+                    bar.get_y() + bar.get_height() / 2,
+                    f"{sign}Rs.{val/1e6:.2f}M" if abs(val) >= 1e6 else f"{sign}Rs.{val/1e3:.1f}K",
+                    va="center", ha="left" if val >= 0 else "right",
+                    color=GREEN if val > 0 else RED,
+                    fontsize=8.5, fontweight="bold"
+                )
+
+            ax.axvline(0, color=TEXT2, linewidth=0.8, zorder=2)
+            ax.set_xlabel("SHAP Value (impact on price)", color=TEXT2, fontsize=10)
+            ax.set_title("SHAP Waterfall — Feature Impact on Price",
+                         color=TEXT, fontsize=12, fontweight="bold", pad=14)
+
+            graph_type = "SHAP (TreeExplainer)"
+
+        else:
+            # ════════════ Gain importance fallback ════════════
+            feat_vals = df.iloc[0].to_dict()
+            pairs = []
+            for fname, importance in GAIN_IMPORTANCES.items():
+                if importance < 1e-8:
+                    continue
+                fv = feat_vals.get(fname, 0.0)
+                is_ohe = any(fname.startswith(p) for p in ("district_","area_","water_","electricity_"))
+                if is_ohe and fv < 0.5:
+                    continue
+                score = importance * (abs(fv) if not is_ohe else 1.0)
+                pairs.append((_label(fname), score))
+
+            pairs.sort(key=lambda x: x[1])
+            pairs = pairs[-10:]
+
+            labels = [p[0] for p in pairs]
+            values = [p[1] for p in pairs]
+            colors = [BLUE] * len(values)
+
+            fig, ax = plt.subplots(figsize=(9, 5))
+            fig.patch.set_facecolor(BG)
+            ax.set_facecolor(SURFACE)
+
+            bars = ax.barh(labels, values, color=colors,
+                           height=0.6, edgecolor="none", zorder=3)
+
+            max_val = max(values) or 1.0
+            for bar, val in zip(bars, values):
+                ax.text(
+                    bar.get_width() + max_val * 0.015,
+                    bar.get_y() + bar.get_height() / 2,
+                    f"{val:.3f}",
+                    va="center", ha="left",
+                    color=BLUE, fontsize=8.5, fontweight="bold"
+                )
+
+            ax.set_xlabel("Feature Importance (Gain)", color=TEXT2, fontsize=10)
+            ax.set_title("XGBoost Feature Importance — Top Factors",
+                         color=TEXT, fontsize=12, fontweight="bold", pad=14)
+
+            graph_type = "XGBoost Gain Importance"
+
+        # ── Shared styling ──
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+        ax.tick_params(colors=TEXT2, labelsize=9)
+        ax.xaxis.label.set_color(TEXT2)
+        ax.yaxis.set_tick_params(labelcolor=TEXT)
+        ax.set_yticklabels(labels, fontsize=9.5)
+        ax.grid(axis="x", color="#2A3550", linewidth=0.7, zorder=1)
+        ax.set_xlim(left=min(0, min(values)) * 1.25 if values else 0,
+                    right=max(values) * 1.22 if values else 1)
+
+        # Legend
+        if EXPLAINER_TYPE == "shap":
+            up_patch   = mpatches.Patch(color=GREEN, label="↑ Increases price")
+            down_patch  = mpatches.Patch(color=RED,   label="↓ Decreases price")
+            ax.legend(handles=[up_patch, down_patch], loc="lower right",
+                      facecolor=SURFACE, edgecolor="#2A3550",
+                      labelcolor=TEXT, fontsize=9)
+
+        plt.tight_layout(pad=1.5)
+
+        # ── Encode to base64 ──
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=150, bbox_inches="tight",
+                    facecolor=BG, edgecolor="none")
+        plt.close(fig)
+        buf.seek(0)
+        img_b64 = base64.b64encode(buf.read()).decode("utf-8")
+
+        return JSONResponse({"image": img_b64, "graph_type": graph_type})
+
+    except Exception as e:
+        raise HTTPException(500, f"Plot generation failed: {str(e)}")
 
 
 if __name__ == "__main__":
