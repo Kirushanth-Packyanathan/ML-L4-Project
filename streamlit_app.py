@@ -804,8 +804,10 @@ hr.sep {
 </style>
 """, unsafe_allow_html=True)
 
+import os
+
 # ─── Constants ────────────────────────────────────────────────────────────────
-API_BASE   = "http://localhost:8000"
+API_BASE   = os.getenv("API_URL", "http://localhost:8000")
 DISTRICTS  = [
     "Ampara","Anuradhapura","Badulla","Batticaloa","Colombo","Galle",
     "Gampaha","Hambantota","Jaffna","Kalutara","Kandy","Kegalle",
