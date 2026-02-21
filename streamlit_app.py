@@ -166,7 +166,39 @@ hr.sep {
 }
 
 /* ─── Form Controls ────────────────────────── */
-.stSelectbox > div > div,
+/* Select box container */
+.stSelectbox > div > div {
+    background: #FFFFFF !important;
+    border: 1.5px solid #D0D5DD !important;
+    border-radius: 9px !important;
+}
+/* Select box displayed value text */
+.stSelectbox [data-baseweb="select"] > div,
+.stSelectbox [data-baseweb="select"] span,
+.stSelectbox [data-baseweb="select"] div[class*="ValueContainer"] span,
+.stSelectbox [data-baseweb="select"] div[class*="ValueContainer"] div {
+    color: #101828 !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+}
+/* Dropdown menu options */
+[data-baseweb="popover"] li,
+[data-baseweb="menu"] li,
+[data-baseweb="option"],
+[data-baseweb="option"] span,
+[role="option"], [role="listbox"] * {
+    color: #101828 !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-size: 0.95rem !important;
+    background: #FFFFFF !important;
+}
+[data-baseweb="option"]:hover,
+[role="option"]:hover {
+    background: #FFF4ED !important;
+    color: #fd7e14 !important;
+}
+/* Number input */
 .stNumberInput > div > div > input {
     background: #FFFFFF !important;
     border: 1.5px solid #D0D5DD !important;
@@ -174,25 +206,28 @@ hr.sep {
     color: #101828 !important;
     font-family: 'Plus Jakarta Sans', sans-serif !important;
     font-size: 1rem !important;
-    transition: border-color 0.15s ease !important;
+    font-weight: 500 !important;
 }
-.stSelectbox > div > div:hover,
-.stNumberInput > div > div > input:hover {
-    border-color: #98A2B3 !important;
-}
-.stSelectbox > div > div:focus-within,
-.stNumberInput > div > div:focus-within {
+.stNumberInput > div > div > input:focus {
     border-color: #fd7e14 !important;
     box-shadow: 0 0 0 3px rgba(253,126,20,0.12) !important;
+    outline: none !important;
 }
-.stSelectbox label, .stNumberInput label,
-.stCheckbox label span {
+/* All field labels */
+.stSelectbox label, .stNumberInput label, .stCheckbox label {
     font-size: 0.9rem !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
     color: #344054 !important;
     font-family: 'Plus Jakarta Sans', sans-serif !important;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+}
+/* Checkbox text */
+.stCheckbox label span, .stCheckbox label p {
+    color: #344054 !important;
+    font-size: 0.92rem !important;
+    font-weight: 600 !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
 
 /* ─── Price Result ──────────────────────────── */
@@ -283,21 +318,33 @@ hr.sep {
     padding: 3px; gap: 2px;
     border: none;
 }
-.stTabs [data-baseweb="tab"] {
+.stTabs [data-baseweb="tab"],
+.stTabs [data-baseweb="tab"] p,
+.stTabs [data-baseweb="tab"] span,
+.stTabs [data-baseweb="tab"] div {
     border-radius: 8px; border: none;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-weight: 600; font-size: 0.92rem;
-    color: #667085;
-    padding: 0.42rem 1rem;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+    color: #667085 !important;
+    padding: 0.5rem 1.1rem;
     transition: all 0.2s ease;
+    background: transparent;
 }
-.stTabs [aria-selected="true"] {
+.stTabs [aria-selected="true"],
+.stTabs [aria-selected="true"] p,
+.stTabs [aria-selected="true"] span,
+.stTabs [aria-selected="true"] div {
     background: #FFFFFF !important;
     color: #101828 !important;
     box-shadow: 0 1px 4px rgba(16,24,40,0.1) !important;
+    font-weight: 700 !important;
 }
 .stTabs [data-baseweb="tab-border"],
 .stTabs [data-baseweb="tab-highlight"] { display: none; }
+.stTabs [data-baseweb="tab-panel"] {
+    padding-top: 0 !important;
+}
 
 /* ─── Summary Grid ──────────────────────────── */
 .sum-grid {
