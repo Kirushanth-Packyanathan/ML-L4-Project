@@ -1128,8 +1128,8 @@ with R:
               </div>
             </div>""", unsafe_allow_html=True)
 
-            # ── Sub-tabs: SHAP Chart | Feature Breakdown ──
-            xai_chart_tab, xai_bars_tab = st.tabs(["📊  SHAP Chart", "📋  Feature Breakdown"])
+            # ── Sub-tabs: SHAP Chart | Text Insights ──
+            xai_chart_tab, xai_bars_tab = st.tabs(["📊  SHAP Chart", "�  AI Insights"])
 
             # ─── SHAP Chart sub-tab ───────────────────────────────────
             with xai_chart_tab:
@@ -1193,43 +1193,157 @@ with R:
                 else:
                     st.info("SHAP chart not available.")
 
-            # ─── Feature Breakdown sub-tab ────────────────────────────
+            # ─── AI Insights sub-tab ──────────────────────────────────
             with xai_bars_tab:
                 if contribs:
-                    html = ""
-                    for i, c in enumerate(contribs):
-                        d   = c["direction"]
+                    # ── Build narrative sentences for each contribution ──
+                    def _insight_sentence(c, rank, pfmt_short):
                         lbl = c["label"]
                         pct = c["percentage"]
-                        delay = i * 80
-                        if d == "increase":
-                            arrow = '<span class="feat-arrow-up">▲</span>'
-                            fill  = "feat-fill-up"
-                        elif d == "decrease":
-                            arrow = '<span class="feat-arrow-dn">▼</span>'
-                            fill  = "feat-fill-dn"
-                        else:
-                            arrow = '<span class="feat-arrow-neu">→</span>'
-                            fill  = "feat-fill-neutral"
+                        d   = c["direction"]
 
-                        html += f"""
-                        <div class="feat-item" style="animation-delay:{delay}ms">
-                          <div class="feat-row">
-                            <span class="feat-name">
-                              <span class="feat-rank">#{i+1}</span>
-                              {arrow}{lbl}
-                            </span>
-                            <span class="feat-pct-wrap">
-                              <span class="feat-pct">{pct:.1f}%</span>
-                            </span>
+                        # Emoji map for known features
+                        emoji_map = {
+                            "Land Size": "📐", "Bedrooms": "🛏️", "Bathrooms": "🚿",
+                            "Kitchen Area": "🍳", "Parking": "🚗", "Garden": "🌿",
+                            "Air Conditioning": "❄️", "Floors": "🏢", "House Age": "⏳",
+                            "District": "📍", "Area": "🗺️", "Water Supply": "💧",
+                            "Electricity": "⚡",
+                        }
+                        icon = "🔹"
+                        for key, em in emoji_map.items():
+                            if key.lower() in lbl.lower():
+                                icon = em
+                                break
+
+                        dir_word = "increases" if d == "increase" else "decreases" if d == "decrease" else "has a neutral effect on"
+                        dir_col  = "#10D9A0"   if d == "increase" else "#F56565"   if d == "decrease" else "#4F8EF7"
+                        dir_badge= "▲ Positive" if d == "increase" else "▼ Negative" if d == "decrease" else "→ Neutral"
+                        badge_bg  = "rgba(16,217,160,0.1)"  if d == "increase" else "rgba(245,101,101,0.1)" if d == "decrease" else "rgba(79,142,247,0.1)"
+                        badge_bdr = "rgba(16,217,160,0.25)" if d == "increase" else "rgba(245,101,101,0.25)" if d == "decrease" else "rgba(79,142,247,0.25)"
+
+                        return f"""
+                        <div style="
+                          background:var(--surface2);
+                          border:1px solid var(--border);
+                          border-left:3px solid {dir_col};
+                          border-radius:10px;
+                          padding:0.8rem 1rem;
+                          margin-bottom:0.6rem;
+                          animation:fadein-up 0.4s ease {rank*60}ms both;
+                        ">
+                          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
+                            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.95rem;font-weight:700;color:var(--text);">
+                              <span style="font-size:1.1rem">{icon}</span>
+                              <span>#{rank+1} — {lbl}</span>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
+                              <span style="
+                                background:{badge_bg};border:1px solid {badge_bdr};
+                                color:{dir_col};border-radius:100px;
+                                padding:0.18rem 0.6rem;font-size:0.73rem;font-weight:700;
+                                letter-spacing:0.04em;
+                              ">{dir_badge}</span>
+                              <span style="
+                                background:var(--surface);border:1px solid var(--border);
+                                color:var(--text3);border-radius:100px;
+                                padding:0.18rem 0.55rem;font-size:0.73rem;font-weight:700;
+                              ">{pct:.1f}%</span>
+                            </div>
                           </div>
-                          <div class="feat-track">
-                            <div class="{fill}" style="width:{min(pct,100):.1f}%;animation-delay:{delay}ms"></div>
+                          <div style="font-size:0.85rem;color:var(--text2);margin-top:0.4rem;line-height:1.6;">
+                            <b style="color:{dir_col}">{lbl}</b> {dir_word} the estimated price,
+                            contributing <b style="color:var(--text)">{pct:.1f}%</b> of the total model explanation for this property.
                           </div>
                         </div>"""
-                    st.markdown(html, unsafe_allow_html=True)
+
+                    # ── Summary headline ──
+                    top3_pos = [c for c in contribs if c["direction"] == "increase"][:3]
+                    top3_neg = [c for c in contribs if c["direction"] == "decrease"][:2]
+                    top_driver = contribs[0]["label"] if contribs else "—"
+
+                    pos_names = " · ".join(f"<b>{c['label']}</b>" for c in top3_pos)
+                    neg_names = " · ".join(f"<b>{c['label']}</b>" for c in top3_neg) if top3_neg else "none identified"
+
+                    st.markdown(f"""
+                    <div style="
+                      background:linear-gradient(135deg,rgba(167,139,250,0.07),rgba(79,142,247,0.07));
+                      border:1px solid rgba(167,139,250,0.2);
+                      border-radius:12px;
+                      padding:1rem 1.1rem;
+                      margin-bottom:1rem;
+                    ">
+                      <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;
+                                  letter-spacing:0.1em;color:var(--purple);margin-bottom:0.4rem;">
+                        🧠 AI Valuation Narrative
+                      </div>
+                      <div style="font-size:0.92rem;color:var(--text);line-height:1.7;">
+                        The strongest single driver of this estimate is
+                        <b style="color:#FF6B2B">{top_driver}</b>. Features pushing the price
+                        <b style="color:#10D9A0">up</b>: {pos_names if pos_names else "—"}.
+                        Features pulling the price <b style="color:#F56565">down</b>: {neg_names}.
+                      </div>
+                    </div>""", unsafe_allow_html=True)
+
+                    # ── Per-feature insight cards ──
+                    insight_html = ""
+                    for i, c in enumerate(contribs):
+                        insight_html += _insight_sentence(c, i, pfmt)
+                    st.markdown(insight_html, unsafe_allow_html=True)
+
+                    # ── Market context note ──
+                    age    = 2025 - pay["year_built"]
+                    ppp    = price / pay["perch"]    if pay["perch"]    > 0 else 0
+                    perch  = pay["perch"]
+                    bed    = pay["bedrooms"]
+                    dist   = pay["district"]
+                    area_n = pay["area"]
+
+                    age_note  = "a newer property (≤10 years)" if age <= 10 else "a moderately aged property (11–25 years)" if age <= 25 else "an older property (25+ years)"
+                    size_note = "a large land plot (15+ perches)" if perch >= 15 else "a mid-size land plot (8–14 perches)" if perch >= 8 else "a compact land plot (<8 perches)"
+
+                    st.markdown(f"""
+                    <div style="
+                      background:rgba(255,107,43,0.06);
+                      border:1px solid rgba(255,107,43,0.18);
+                      border-radius:12px;
+                      padding:1rem 1.1rem;
+                      margin-top:0.8rem;
+                    ">
+                      <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;
+                                  letter-spacing:0.1em;color:var(--accent);margin-bottom:0.5rem;">
+                        📊 Market Context
+                      </div>
+                      <div style="font-size:0.88rem;color:var(--text2);line-height:1.75;">
+                        This property is located in <b style="color:var(--text)">{area_n}, {dist}</b> — one of Sri Lanka's
+                        {"high-demand urban" if dist in ["Colombo","Gampaha","Kandy","Galle"] else "emerging"} real estate markets.
+                        It is classified as <b style="color:var(--text)">{age_note}</b> and sits on
+                        <b style="color:var(--text)">{size_note}</b> with <b style="color:var(--text)">{bed} bedroom{"s" if bed != 1 else ""}</b>.
+                        The per-perch value works out to approximately
+                        <b style="color:#FF6B2B">{fmt_lkr(ppp)}</b>, which reflects the demand-supply dynamics of this location.
+                        {"Air conditioning adds measurable premium in this climate." if pay.get("has_ac") else ""}
+                        {"Garden space is a positive value signal in suburban areas." if pay.get("has_garden") and dist not in ["Colombo"] else ""}
+                      </div>
+                    </div>""", unsafe_allow_html=True)
+
+                    # ── Caveats ──
+                    st.markdown("""
+                    <div style="
+                      margin-top:0.8rem;
+                      padding:0.7rem 1rem;
+                      background:var(--surface2);
+                      border:1px solid var(--border);
+                      border-radius:10px;
+                      font-size:0.8rem;color:var(--text3);line-height:1.6;
+                    ">
+                      ⚠️ <b style="color:var(--text2)">Disclaimer:</b>
+                      This AI estimate is based on historical market data and machine learning patterns.
+                      It does not account for recent market shifts, property condition, legal encumbrances,
+                      or negotiated prices. Always consult a certified valuer for formal assessments.
+                    </div>""", unsafe_allow_html=True)
+
                 else:
-                    st.info("No explanation data returned from the model.")
+                    st.info("No contribution data available to generate insights.")
 
             st.markdown('</div>', unsafe_allow_html=True)
 
