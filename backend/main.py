@@ -1,11 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import Optional
-import xgboost as xgb
 import numpy as np
+import pandas as pd
+import pickle
 import os
-import json
 
 app = FastAPI(
     title="Sri Lanka House Price Predictor",
@@ -21,16 +20,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Load pre-built .pkl model ──────────────────────────────────────────────────
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "house_price_model.pkl")
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "house_price_model.json")
+with open(MODEL_PATH, "rb") as f:
+    model = pickle.load(f)
 
-model = xgb.Booster()
-model.load_model(MODEL_PATH)
 print(f"Model loaded successfully from {MODEL_PATH}")
+print(f"Model type: {type(model)}")
 
-#Feature Constants
+# ── Feature Constants ──────────────────────────────────────────────────────────
 DISTRICTS = [
-    "Anuradhapura", "Badulla", "Batticaloa", "Colombo", "Galle",
+    "Ampara", "Anuradhapura", "Badulla", "Batticaloa", "Colombo", "Galle",
     "Gampaha", "Hambantota", "Jaffna", "Kalutara", "Kandy",
     "Kegalle", "Kilinochchi", "Kurunegala", "Mannar", "Matale",
     "Matara", "Monaragala", "Mullaitivu", "Nuwara Eliya", "Polonnaruwa",
@@ -38,6 +39,7 @@ DISTRICTS = [
 ]
 
 AREAS = {
+    "Ampara": ["Ampara Central"],
     "Anuradhapura": ["Madawachchiya", "New Town", "Nuwaragam Palatha"],
     "Badulla": ["Badulla Town", "Bandarawela", "Hali Ela"],
     "Batticaloa": ["Batticaloa Town", "Eravur", "Kallady"],
@@ -67,48 +69,54 @@ AREAS = {
 WATER_SUPPLY_OPTIONS = ["Both", "Pipe-borne", "Well"]
 ELECTRICITY_OPTIONS = ["Single phase", "Three phase"]
 
-# Feature names from the model (order matters!)
-FEATURE_NAMES = [
+# Exact feature names the pkl model was trained on (108 total).
+# Extracted directly from the XGBoost feature_names mismatch error.
+# ALL categories are included - no reference-category dropping.
+MODEL_FEATURE_NAMES = [
     "perch", "bedrooms", "bathrooms", "kitchen_area_sqft", "parking_spots",
     "has_garden", "has_ac", "floors", "house_age",
-    # District one-hot (24 districts, but only 22 in model after dropping 2 for reference)
-    "district_Anuradhapura", "district_Badulla", "district_Batticaloa",
-    "district_Colombo", "district_Galle", "district_Gampaha",
-    "district_Hambantota", "district_Jaffna", "district_Kalutara",
-    "district_Kandy", "district_Kegalle", "district_Kilinochchi",
-    "district_Kurunegala", "district_Mannar", "district_Matale",
-    "district_Matara", "district_Monaragala", "district_Mullaitivu",
-    "district_Nuwara Eliya", "district_Polonnaruwa", "district_Puttalam",
-    "district_Ratnapura", "district_Trincomalee", "district_Vavuniya",
-    # Area one-hot
-    "area_Ambalantota", "area_Ampara Central", "area_Badulla Town",
-    "area_Bambalapitiya", "area_Bandarawela", "area_Batticaloa Town",
-    "area_Beruwala", "area_Borella", "area_China Bay", "area_Chunnakam",
-    "area_Dehiwala", "area_Eravur", "area_Galle Fort", "area_Gampaha Town",
-    "area_Gatambe", "area_Hali Ela", "area_Hambantota Town", "area_Hikkaduwa",
-    "area_Ja-Ela", "area_Jaffna Town", "area_Kadawatha", "area_Kallady",
-    "area_Kalutara North", "area_Kandy City", "area_Karapitiya",
-    "area_Katugastota", "area_Kegalle Central", "area_Kilinochchi Central",
-    "area_Kokuvil", "area_Kollupitiya", "area_Kurunegala Town",
-    "area_Kuruwita", "area_Madawachchiya", "area_Mannar Central",
-    "area_Matale Central", "area_Matara Town", "area_Melsiripura",
-    "area_Monaragala Central", "area_Mount Lavinia", "area_Mullaitivu Central",
-    "area_Nallur", "area_Narahenpita", "area_Negombo", "area_New Town",
+    # District one-hot (25 districts)
+    "district_Ampara", "district_Anuradhapura", "district_Badulla",
+    "district_Batticaloa", "district_Colombo", "district_Galle",
+    "district_Gampaha", "district_Hambantota", "district_Jaffna",
+    "district_Kalutara", "district_Kandy", "district_Kegalle",
+    "district_Kilinochchi", "district_Kurunegala", "district_Mannar",
+    "district_Matale", "district_Matara", "district_Monaragala",
+    "district_Mullaitivu", "district_Nuwara Eliya", "district_Polonnaruwa",
+    "district_Puttalam", "district_Ratnapura", "district_Trincomalee",
+    "district_Vavuniya",
+    # Area one-hot (all areas)
+    "area_Akurugoda", "area_Ambalantota", "area_Ampara Central",
+    "area_Badulla Town", "area_Bambalapitiya", "area_Bandarawela",
+    "area_Batticaloa Town", "area_Beruwala", "area_Borella",
+    "area_China Bay", "area_Chunnakam", "area_Dehiwala",
+    "area_Eravur", "area_Galle Fort", "area_Gampaha Town",
+    "area_Gatambe", "area_Hali Ela", "area_Hambantota Town",
+    "area_Hikkaduwa", "area_Ja-Ela", "area_Jaffna Town",
+    "area_Kadawatha", "area_Kallady", "area_Kalutara North",
+    "area_Kandy City", "area_Karapitiya", "area_Katugastota",
+    "area_Kegalle Central", "area_Kilinochchi Central", "area_Kokuvil",
+    "area_Kollupitiya", "area_Kurunegala Town", "area_Kuruwita",
+    "area_Madawachchiya", "area_Mannar Central", "area_Matale Central",
+    "area_Matara Town", "area_Melsiripura", "area_Monaragala Central",
+    "area_Mount Lavinia", "area_Mullaitivu Central", "area_Nallur",
+    "area_Narahenpita", "area_Negombo", "area_New Town",
     "area_Nilaveli", "area_Nugegoda", "area_Nupe",
     "area_Nuwara Eliya Central", "area_Nuwaragam Palatha", "area_Panadura",
     "area_Pannala", "area_Pelmadulla", "area_Peradeniya", "area_Polgahawela",
     "area_Polonnaruwa Central", "area_Puttalam Central", "area_Ragama",
     "area_Rajagiriya", "area_Ratnapura Town", "area_Tangalle",
     "area_Tennekumbura", "area_Unawatuna", "area_Uppuveli",
-    "area_Vavuniya Central", "area_Wadduwa", "area_Wattala", "area_Weligama",
-    "area_Wellawatte",
-    # Water supply one-hot (2 features, "Both" is reference)
-    "water_supply_Pipe-borne", "water_supply_Well",
-    # Electricity one-hot (1 feature, "Single phase" is reference)
-    "electricity_Three phase",
+    "area_Vavuniya Central", "area_Wadduwa", "area_Wattala",
+    "area_Weligama", "area_Wellawatte",
+    # Water supply - ALL 3 categories (no reference dropping)
+    "water_supply_Both", "water_supply_Pipe-borne", "water_supply_Well",
+    # Electricity - BOTH categories (no reference dropping)
+    "electricity_Single phase", "electricity_Three phase",
 ]
 
 
+# ── Pydantic Models ────────────────────────────────────────────────────────────
 class HouseInput(BaseModel):
     district: str = Field(..., description="District name")
     area: str = Field(..., description="Area name within the district")
@@ -138,81 +146,86 @@ class OptionsResponse(BaseModel):
     electricity_options: list[str]
 
 
-def prepare_features(house: HouseInput) -> np.ndarray:
-    """Convert HouseInput to feature array matching model's expected input."""
-    
-    # Calculate house_age (reference year from dataset is 2025)
+# ── Feature Engineering ────────────────────────────────────────────────────────
+def build_feature_dataframe(house: HouseInput) -> pd.DataFrame:
+    """Build a DataFrame with exactly the 108 features the model expects.
+
+    ALL categorical columns are one-hot encoded with every category present
+    (no reference-category dropping), matching the training-time pd.get_dummies
+    behaviour with drop_first=False.
+    """
     house_age = 2025 - house.year_built
-    
-    features = np.zeros(len(FEATURE_NAMES), dtype=np.float32)
-    
+
+    # Start with all features set to zero
+    row = {col: 0.0 for col in MODEL_FEATURE_NAMES}
+
     # Numerical features
-    features[0] = house.perch
-    features[1] = house.bedrooms
-    features[2] = house.bathrooms
-    features[3] = house.kitchen_area_sqft
-    features[4] = house.parking_spots
-    features[5] = 1 if house.has_garden else 0
-    features[6] = 1 if house.has_ac else 0
-    features[7] = house.floors
-    features[8] = house_age
-    
+    row["perch"] = float(house.perch)
+    row["bedrooms"] = float(house.bedrooms)
+    row["bathrooms"] = float(house.bathrooms)
+    row["kitchen_area_sqft"] = float(house.kitchen_area_sqft)
+    row["parking_spots"] = float(house.parking_spots)
+    row["has_garden"] = 1.0 if house.has_garden else 0.0
+    row["has_ac"] = 1.0 if house.has_ac else 0.0
+    row["floors"] = float(house.floors)
+    row["house_age"] = float(house_age)
+
     # District one-hot
-    district_col = f"district_{house.district}"
-    if district_col in FEATURE_NAMES:
-        features[FEATURE_NAMES.index(district_col)] = 1
-    
+    d_col = f"district_{house.district}"
+    if d_col in row:
+        row[d_col] = 1.0
+
     # Area one-hot
-    area_col = f"area_{house.area}"
-    if area_col in FEATURE_NAMES:
-        features[FEATURE_NAMES.index(area_col)] = 1
-    
-    # Water supply one-hot
-    if house.water_supply == "Pipe-borne":
-        features[FEATURE_NAMES.index("water_supply_Pipe-borne")] = 1
-    elif house.water_supply == "Well":
-        features[FEATURE_NAMES.index("water_supply_Well")] = 1
-    # "Both" is the reference category (all zeros)
-    
-    # Electricity one-hot
-    if house.electricity == "Three phase":
-        features[FEATURE_NAMES.index("electricity_Three phase")] = 1
-    # "Single phase" is the reference category (zero)
-    
-    return features
+    a_col = f"area_{house.area}"
+    if a_col in row:
+        row[a_col] = 1.0
+
+    # Water supply one-hot (all 3 categories encoded)
+    ws_col = f"water_supply_{house.water_supply}"
+    if ws_col in row:
+        row[ws_col] = 1.0
+
+    # Electricity one-hot (both categories encoded)
+    el_col = f"electricity_{house.electricity}"
+    if el_col in row:
+        row[el_col] = 1.0
+
+    # Return DataFrame with columns in exact model order
+    return pd.DataFrame([row], columns=MODEL_FEATURE_NAMES)
 
 
+# ── Helpers ────────────────────────────────────────────────────────────────────
 def format_lkr(amount: float) -> str:
-    """Format amount as Sri Lankan Rupees."""
     if amount >= 1_000_000:
         return f"Rs. {amount / 1_000_000:.2f} Million"
     elif amount >= 1_000:
         return f"Rs. {amount / 1_000:.2f}K"
-    else:
-        return f"Rs. {amount:.2f}"
+    return f"Rs. {amount:.2f}"
 
 
+# ── API Routes ─────────────────────────────────────────────────────────────────
 @app.get("/", tags=["Root"])
 async def root():
     return {
-        "message": "🏠 Sri Lanka House Price Prediction API",
+        "message": "Sri Lanka House Price Prediction API",
         "version": "1.0.0",
-        "endpoints": {
-            "predict": "/api/predict",
-            "options": "/api/options",
-            "health": "/api/health",
-        }
+        "model_type": type(model).__name__,
+        "feature_count": len(MODEL_FEATURE_NAMES),
     }
 
 
 @app.get("/api/health", tags=["Health"])
 async def health_check():
-    return {"status": "healthy", "model_loaded": True}
+    return {
+        "status": "healthy",
+        "model_loaded": True,
+        "model_type": type(model).__name__,
+        "feature_count": len(MODEL_FEATURE_NAMES),
+    }
 
 
 @app.get("/api/options", response_model=OptionsResponse, tags=["Options"])
 async def get_options():
-    """Get all available dropdown options for the prediction form."""
     return OptionsResponse(
         districts=DISTRICTS,
         areas=AREAS,
@@ -223,35 +236,21 @@ async def get_options():
 
 @app.post("/api/predict", response_model=PredictionResponse, tags=["Prediction"])
 async def predict_price(house: HouseInput):
-    """Predict the price of a house based on input features."""
-
-    # Validate district
     if house.district not in DISTRICTS:
         raise HTTPException(status_code=400, detail=f"Invalid district: {house.district}")
-    
-    # Validate area
     if house.district in AREAS and house.area not in AREAS[house.district]:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid area '{house.area}' for district '{house.district}'"
-        )
-    
-    # Validate water supply
+        raise HTTPException(status_code=400, detail=f"Invalid area '{house.area}' for district '{house.district}'")
     if house.water_supply not in WATER_SUPPLY_OPTIONS:
         raise HTTPException(status_code=400, detail=f"Invalid water supply: {house.water_supply}")
-    
-    # Validate electricity
     if house.electricity not in ELECTRICITY_OPTIONS:
         raise HTTPException(status_code=400, detail=f"Invalid electricity: {house.electricity}")
-    
-    try:
-        features = prepare_features(house)
-        dmatrix = xgb.DMatrix(features.reshape(1, -1), feature_names=FEATURE_NAMES)
-        prediction = model.predict(dmatrix)[0]
 
-        # Ensure prediction is positive
-        predicted_price = max(float(prediction), 0)
-        
+    try:
+        df = build_feature_dataframe(house)
+        log_prediction = model.predict(df)
+        # Model was trained on log-transformed prices — reverse with exp()
+        predicted_price = max(float(np.exp(np.array(log_prediction).ravel()[0])), 0)
+
         return PredictionResponse(
             predicted_price_lkr=round(predicted_price, 2),
             predicted_price_formatted=format_lkr(predicted_price),
@@ -271,7 +270,6 @@ async def predict_price(house: HouseInput):
                 "year_built": house.year_built,
             }
         )
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
