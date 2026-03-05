@@ -1,0 +1,16 @@
+name: Ping URLs Daily
+
+on:
+  schedule:
+    - cron: "0 2 * * *"  # runs daily at 2:00 AM UTC
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping URLs
+        run: |
+          curl https://lanka-property-api.onrender.com/
+          curl https://lankaestimate.streamlit.app/
