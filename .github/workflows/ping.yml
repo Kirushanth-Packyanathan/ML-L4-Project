@@ -2,7 +2,7 @@ name: Ping URLs Daily
 
 on:
   schedule:
-    - cron: "0 2 * * *"  # runs daily at 2:00 AM UTC
+    - cron: "*/10 * * * *"  # runs every 10 minutes
   workflow_dispatch:
 
 jobs:
